@@ -4,8 +4,8 @@
     "password": "1234",
     "fullName": "Nergis Gül",
     "email": "nergis.gul@vestel.com.tr",
-    "points": 155,
-    "level": 4,
+    "points": 0,
+    "level": 1,
     "isAdmin": true
   },
   {
@@ -13,7 +13,7 @@
     "password": "1234",
     "fullName": "Utku Serin",
     "email": "utku.serin@vestel.com.tr",
-    "points": 20,
+    "points": 0,
     "level": 1,
     "isAdmin": false
   },
@@ -58,7 +58,7 @@
     "password": "1234",
     "fullName": "Ece Tekin",
     "email": "etekin1964@gmail.com",
-    "points": 20,
+    "points": 0,
     "level": 1,
     "isAdmin": true
   },
@@ -67,7 +67,7 @@
     "password": "1234",
     "fullName": "Sinan Ataseven",
     "email": "sinanataseven1022@gmail.com",
-    "points": 10,
+    "points": 0,
     "level": 1,
     "isAdmin": true
   }
