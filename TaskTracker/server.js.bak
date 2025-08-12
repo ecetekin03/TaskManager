@@ -1,0 +1,325 @@
+// server.js
+
+require("dotenv").config();
+const express    = require("express");
+const fs         = require("fs");
+const path       = require("path");
+const cron       = require("node-cron");
+const nodemailer = require("nodemailer");
+const app        = express();
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+
+const USERS_PATH        = "./data/users.json";
+const TASKS_PATH        = "./data/tasks.json";
+const GOALS_PATH        = "./data/goals.json";
+const USER_GOALS_PATH   = "./data/userGoals.json";
+const DAILY_POINTS_PATH = "./data/dailyPoints.json";
+
+// --- Verileri yükle ---
+let users      = JSON.parse(fs.readFileSync(USERS_PATH));
+let tasks      = JSON.parse(fs.readFileSync(TASKS_PATH));
+let goals      = JSON.parse(fs.readFileSync(GOALS_PATH));
+let userGoals  = fs.existsSync(USER_GOALS_PATH)
+                   ? JSON.parse(fs.readFileSync(USER_GOALS_PATH))
+                   : [];
+
+// --- SMTP Transporter ---
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+// === 1) AUTH & USER ENDPOINTS ===
+
+// Login
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
+  const user = users.find(u => u.username === username && u.password === password);
+  if (user) res.json({ user });
+  else      res.status(401).json({ message: "Geçersiz kullanıcı!" });
+});
+
+// Tüm kullanıcılar (admin dropdown için)
+app.get("/users", (req, res) => {
+  res.json(users.map(u => ({ username: u.username, fullName: u.fullName })));
+});
+
+// Leaderboard
+app.get("/leaderboard", (req, res) => {
+  const lb = users
+    .map(u => ({ fullName: u.fullName, points: u.points, level: u.level }))
+    .sort((a,b) => b.points - a.points);
+  res.json(lb);
+});
+
+// === 2) UZUN VADELİ HEDEFLER AKIŞI ===
+
+// Mevcut hedefler listesi
+app.get("/goals", (req, res) => {
+  res.json(goals);
+});
+
+// Kullanıcının seçtiği hedefler (tüm ekip + durumları)
+app.get("/selectedGoals", (req, res) => {
+  const detailed = userGoals.map(ug => {
+    const g = goals.find(goal => goal.id === ug.goalId);
+    return {
+      username: ug.username,
+      goalId:   ug.goalId,
+      goal:     g ? g.goal   : "N/A",
+      points:   g ? g.points : 0,
+      status:   ug.status
+    };
+  });
+  res.json(detailed);
+});
+
+// Hedef seç
+app.post("/addGoal", (req, res) => {
+  const { username, goalId } = req.body;
+  userGoals.push({ username, goalId, status: "available" });
+  fs.writeFileSync(USER_GOALS_PATH, JSON.stringify(userGoals, null, 2));
+  res.json({ message: "Hedef kaydedildi!" });
+});
+
+// Hedef başlat
+app.post("/startGoal", (req, res) => {
+  const { username, goalId } = req.body;
+  const g = userGoals.find(x=>x.username===username && x.goalId===goalId);
+  if (!g) return res.status(400).json({ message:"Hedef bulunamadı!" });
+  g.status = "in-progress";
+  fs.writeFileSync(USER_GOALS_PATH, JSON.stringify(userGoals, null, 2));
+  res.json({ message:"Hedef başlatıldı!" });
+});
+
+// Hedef bitir → onaya gönder
+app.post("/finishGoal", (req, res) => {
+  const { username, goalId } = req.body;
+  const g = userGoals.find(x=>x.username===username && x.goalId===goalId);
+  if (!g) return res.status(400).json({ message:"Hedef bulunamadı!" });
+  g.status = "pending";
+  fs.writeFileSync(USER_GOALS_PATH, JSON.stringify(userGoals, null, 2));
+  res.json({ message:"Hedef onaya gönderildi!" });
+});
+
+// Admin: onay bekleyen hedefler
+app.get("/pendingGoals", (req, res) => {
+  const pending = userGoals
+    .filter(x => x.status==="pending")
+    .map(x => {
+      const goal = goals.find(gg => gg.id===x.goalId);
+      return { username:x.username, goalId:x.goalId, goal:goal.goal, points:goal.points };
+    });
+  res.json(pending);
+});
+
+// Admin: hedef onayla
+app.post("/approveGoal", (req, res) => {
+  const { username, goalId } = req.body;
+  const g   = userGoals.find(x=>x.username===username && x.goalId===goalId);
+  const usr = users.find(u=>u.username===username);
+  if (!g || !usr) return res.status(400).json({ message:"Onaylanacak hedef bulunamadı!" });
+  g.status = "approved";
+  const goal = goals.find(gg=>gg.id===goalId);
+  usr.points += goal.points;
+  usr.level   = Math.floor(usr.points/50)+1;
+  fs.writeFileSync(USER_GOALS_PATH, JSON.stringify(userGoals, null, 2));
+  fs.writeFileSync(USERS_PATH,      JSON.stringify(users,     null, 2));
+  res.json({ message:"Hedef onaylandı!" });
+});
+
+// === 3) GÜNLÜK GÖREV AKIŞI ===
+
+// Atama (admin)
+app.post("/assignTask", (req, res) => {
+  const { title, points, assignedTo } = req.body;
+  const id = Date.now();
+  tasks.push({ id, title, points, assignedTo, status:"available" });
+  fs.writeFileSync(TASKS_PATH, JSON.stringify(tasks, null, 2));
+  res.json({ message:"Görev atandı!" });
+});
+
+// Kullanıcının güncel görevleri
+app.get("/tasks/:username", (req, res) => {
+  res.json(tasks.filter(t=>
+    t.assignedTo===req.params.username &&
+    ["available","in-progress","pending","approved"].includes(t.status)
+  ));
+});
+
+// Başla
+app.post("/startTask", (req, res) => {
+  const { taskId, username } = req.body;
+  const t = tasks.find(x=>x.id===taskId && x.assignedTo===username);
+  if (!t) return res.status(400).json({ message:"Görev bulunamadı!" });
+  t.status = "in-progress";
+  fs.writeFileSync(TASKS_PATH, JSON.stringify(tasks, null, 2));
+  res.json({ message:"Görev başlatıldı!" });
+});
+
+// Bitir → onaya gönder
+app.post("/finishTask", (req, res) => {
+  const { taskId, username } = req.body;
+  const t = tasks.find(x=>x.id===taskId && x.assignedTo===username);
+  if (!t) return res.status(400).json({ message:"Görev bulunamadı!" });
+  t.status = "pending";
+  fs.writeFileSync(TASKS_PATH, JSON.stringify(tasks, null, 2));
+  res.json({ message:"Görev onaya gönderildi!" });
+});
+
+// Admin: onay bekleyen görevler
+app.get("/pendingTasks", (req, res) => {
+  res.json(tasks.filter(t=>t.status==="pending"));
+});
+
+// Admin: görev onayla
+app.post("/approveTask", (req, res) => {
+  try {
+    const { taskId, username, points } = req.body;
+
+    // points güvenli integer'a çevirme (radix belirtildi)
+    const newPoints = Number.isFinite(Number(points)) ? parseInt(points, 10) : 0;
+    if (newPoints < 0) {
+      return res.status(400).json({ message: "Puan negatif olamaz." });
+    }
+
+    const user = users.find(u => u.username === username);
+    // taskId tipi farklı olabileceği için string karşılaştırması kullanıyoruz
+    const task = tasks.find(t => String(t.id) === String(taskId) && t.assignedTo === username);
+
+    if (!user || !task) {
+      return res.status(400).json({ message: "Onaylanacak görev veya kullanıcı bulunamadı!" });
+    }
+
+    // Eskiden onaylıysa eski puarı geri al; değilse kullanıcıya zaten eklenmiş olmaz
+    const oldPoints = parseInt(task.points, 10) || 0;
+    if (task.status === "approved") {
+      user.points = (parseInt(user.points, 10) || 0) - oldPoints;
+    } else {
+      // Eğer istersen burayı boş bırakabiliriz; ama güvenlik için negatif olmamasını sağla
+      user.points = (parseInt(user.points, 10) || 0);
+    }
+
+    // Görevi güncelle
+    task.points = newPoints;
+    task.status = "approved";
+    task.approvedAt = new Date().toISOString();
+
+    // Yeni puanı ekle ve seviye yeniden hesapla
+    user.points = (parseInt(user.points, 10) || 0) + newPoints;
+    if (user.points < 0) user.points = 0; // koruma
+    user.level = Math.floor(user.points / 50) + 1;
+
+    // Dosyalara kaydetme (hata kontrolü ile)
+    fs.writeFileSync(TaskTracker/data/tasks.json, JSON.stringify(tasks, null, 2));
+    fs.writeFileSync(USERS_PATH, JSON.stringify(users, null, 2));
+
+    res.json({ message: "✔️ Görev onaylandı!" });
+  } catch (err) {
+    console.error("approveTask error:", err);
+    res.status(500).json({ message: "Sunucu hatası." });
+  }
+});
+
+
+// Kullanıcıya onaylanmış günlük görevler
+app.get("/completed/:username", (req, res) => {
+  res.json(tasks.filter(t=>
+    t.assignedTo===req.params.username && t.status==="approved"
+  ));
+});
+
+// === 4) HAFTALIK PERFORMANS ENDPOINT’İ ===
+
+// Son 7 günün günlük puan toplamları
+app.get("/weeklyStats/:username", (req, res) => {
+  const uname = req.params.username;
+  const all   = fs.existsSync(DAILY_POINTS_PATH)
+              ? JSON.parse(fs.readFileSync(DAILY_POINTS_PATH))
+              : [];
+  const today = new Date();
+  const days  = [];
+  for (let i=6; i>=0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate()-i);
+    days.push(d.toISOString().slice(0,10));
+  }
+  const stats = days.map(date => {
+    const e = all.find(x=>x.username===uname && x.date===date);
+    return e ? e.pointsEarned : 0;
+  });
+  // döndür: [{ date:"2025-07-01", points: 5 }, … ]
+  res.json(days.map((date,i) => ({ date, points: stats[i] })));
+});
+
+// === 5) GÜNLÜK E-MAİL & TEMİZLEME CRON’u ===
+
+cron.schedule(
+  "40 10 * * *",            
+  () => {
+    const today = new Date().toISOString().slice(0,10);
+    console.log("📬 Cron tetiklendi:", new Date().toString());
+
+    // önce dailyPoints.json’u oku veya başlat
+    let dailyLocal = fs.existsSync(DAILY_POINTS_PATH)
+      ? JSON.parse(fs.readFileSync(DAILY_POINTS_PATH))
+      : [];
+
+    // 1) Kullanıcı bazlı mail + puan kaydı
+    users.forEach(u => {
+      const done = tasks.filter(t =>
+        t.assignedTo===u.username &&
+        t.status==="approved" &&
+        t.approvedAt?.startsWith(today)
+      );
+      if (!done.length) return;
+      // e-posta içeriği
+      const body = done.map(t=>`• ${t.title} → ${t.points} puan`).join("\n");
+      transporter.sendMail({
+        from: `"Görev Takip" <${process.env.EMAIL_USER}>`,
+        to:   u.email, 
+        subject: `${today} Günlük Görev Özeti`,
+        text:    `Merhaba ${u.fullName},\n\nBugün tamamladığın görevler:\n\n${body}`
+      }).catch(console.error);
+      // puan kaydet
+      const total = done.reduce((s,t)=>s+t.points,0);
+      dailyLocal.push({ username:u.username, date:today, pointsEarned:total });
+    });
+
+    // 2) Admin’lere genel rapor
+    const allDone = tasks.filter(t=>
+      t.status==="approved" && t.approvedAt?.startsWith(today)
+    );
+    const adminEmails = users.filter(u=>u.isAdmin).map(u=>u.email);
+    if (allDone.length && adminEmails.length) {
+      const lines = allDone.map(t=>{
+        const u = users.find(x=>x.username===t.assignedTo);
+        return `• ${u.fullName}: ${t.title} (${t.points} puan)`;
+      }).join("\n");
+      transporter.sendMail({
+        from: `"Görev Takip" <${process.env.EMAIL_USER}>`,
+        to: adminEmails,
+        subject: `${today} Tüm Kullanıcıların Günlük Raporu`,
+        text:    `Merhaba,\n\nBugün tüm kullanıcıların tamamladığı görevler:\n\n${lines}`
+      }).catch(console.error);
+    }
+
+    // 3) dailyPoints.json’u güncelle
+    fs.writeFileSync(DAILY_POINTS_PATH, JSON.stringify(dailyLocal, null, 2));
+
+    // 4) Bugünkü onaylanan görevleri dosyadan temizle
+     tasks = tasks.filter(t=>
+      !(t.status==="approved" && t.approvedAt?.startsWith(today))
+    );
+    fs.writeFileSync(TASKS_PATH, JSON.stringify(tasks, null, 2));
+  },
+  { timezone: "Europe/Istanbul"}
+);
+
+// === SERVER START ===
+app.listen(3000, () => console.log("Server http://localhost:3000"));

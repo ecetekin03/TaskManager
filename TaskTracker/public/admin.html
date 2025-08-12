@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin Paneli - Görev Atama</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #f5faff;
+      }
+      h1,
+      h2 {
+        color: #333;
+      }
+      .card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+      select,
+      button {
+        padding: 6px;
+        margin: 5px 0 15px;
+        width: 100%;
+      }
+      ul#pendingList li {
+        margin-bottom: 10px;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>👩‍💼 Admin Paneli</h1>
+
+    <div class="card">
+      <h2>📋 Günlük Görev Atama</h2>
+      <label for="adminGoalUser">Kullanıcı:</label>
+      <select id="adminGoalUser"></select>
+
+      <label for="adminTaskSelect">Görev:</label>
+      <select id="adminTaskSelect"></select>
+
+
+      <button onclick="assignTaskToUser()">➕ Görevi Ata</button>
+      <p id="assignMsg"></p>
+    </div>
+
+    <div class="card">
+      <h2>🕓 Onay Bekleyen Görevler</h2>
+      <ul id="pendingList"></ul>
+    </div>
+
+    <a href="dashboard.html" style="display: block; margin-top: 30px"
+      >← Geri dön (Dashboard)</a
+    >
+
+    <script>
+      async function loadUsersAndTasks() {
+        const [usersRes, tasksRes] = await Promise.all([
+          fetch("/users"),
+          fetch("/tasks"),
+        ]);
+        const users = await usersRes.json();
+        const tasks = await tasksRes.json();
+
+        const userSel = document.getElementById("adminGoalUser");
+        const taskSel = document.getElementById("adminTaskSelect");
+
+        users.forEach((u) => {
+          const opt = document.createElement("option");
+          opt.value = u.username;
+          opt.textContent = u.fullName;
+          userSel.appendChild(opt);
+        });
+
+        tasks.forEach((t) => {
+          const opt = document.createElement("option");
+          opt.value = t.id;
+          opt.textContent = `${t.description} (${t.points} puan)`;
+          taskSel.appendChild(opt);
+        });
+      }
+
+      async function assignTaskToUser() {
+        const username = document.getElementById("adminGoalUser").value;
+        const taskId = parseInt(
+          document.getElementById("adminTaskSelect").value,
+        );
+        const res = await fetch("/assign-task", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, taskId }),
+        });
+        const data = await res.json();
+        document.getElementById("assignMsg").innerText =
+          data.message || "Görev atandı.";
+      }
+
+      async function loadPendingTasks() {
+        const res = await fetch("/pending");
+        const data = await res.json();
+        const list = document.getElementById("pendingList");
+        list.innerHTML = "";
+
+        data.forEach((item) => {
+          const li = document.createElement("li");
+          li.style.display = "flex";
+          li.style.alignItems = "center";
+          li.style.justifyContent = "space-between";
+          li.style.marginBottom = "10px";
+          li.style.padding = "8px";
+          li.style.background = "#eaf6ff";
+          li.style.borderRadius = "6px";
+
+          // Kullanıcı ve görev metni
+          const spanText = document.createElement("span");
+          spanText.textContent = `${item.task.description} (${item.task.points ?? 0} puan) — ${item.username}`;
+          spanText.style.flexGrow = "1";
+
+          // Sağ taraf: Puan inputu + buton
+          const rightControls = document.createElement("div");
+          rightControls.style.display = "flex";
+          rightControls.style.alignItems = "center";
+          rightControls.style.gap = "6px";
+
+          // Puan inputu
+          const pointsInput = document.createElement("input");
+          pointsInput.type = "number";
+          pointsInput.min = "0";
+          pointsInput.style.width = "60px";
+          pointsInput.style.height = "30px";
+          pointsInput.style.fontSize = "14px";
+          pointsInput.style.textAlign = "center";
+          pointsInput.value = item.task.points ?? "";
+
+          // Onayla butonu
+          const btn = document.createElement("button");
+          btn.innerText = "Onayla";
+          btn.style.height = "34px";
+          btn.style.cursor = "pointer";
+          btn.style.backgroundColor = "#00bfff";
+          btn.style.color = "white";
+          btn.style.border = "none";
+          btn.style.borderRadius = "4px";
+          btn.onclick = async () => {
+            const updatedPoints = pointsInput.value ? parseInt(pointsInput.value) : 0;
+
+            await fetch("/approve-task", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                username: item.username,
+                taskId: item.task.id,
+                points: updatedPoints,
+              }),
+            });
+            location.reload();
+          };
+
+          // Yapıyı birleştirme
+          rightControls.appendChild(pointsInput);
+          rightControls.appendChild(btn);
+          li.appendChild(spanText);
+          li.appendChild(rightControls);
+
+          list.appendChild(li);
+        });
+      }
+
+
+
+
+      loadUsersAndTasks();
+      loadPendingTasks();
+    </script>
+  </body>
+</html>

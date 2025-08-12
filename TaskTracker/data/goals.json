@@ -1,0 +1,6 @@
+[
+  { "id": 1, "goal": "BCM EOL Sunumu Hazırlama", "points": 50 },
+  { "id": 2, "goal": "Keyfob EOL Sunumu Hazırlama", "points": 40 },
+  { "id": 3, "goal": "Test Box Otomasyonu", "points": 70 },
+  { "id": 3, "goal": "Testleri hızlandıracak yeni ekipman araştırma", "points": 20 }
+]

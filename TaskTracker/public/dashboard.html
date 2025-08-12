@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Görev Takip Paneli</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h1>🎯 Görev Takip Paneli</h1>
+    <p>
+      Hoş geldin 👋 <strong id="name"></strong> |
+      Seviye: <strong id="level"></strong> |
+      Puan: <strong id="points"></strong>
+    </p>
+  </header>
+
+  <main class="dashboard">
+    <!-- Sol Sütun: Uzun Vadeli Hedefler -->
+    <section class="column">
+      <h2>🎯 Uzun Vadeli Hedefler</h2>
+      <select id="goalSelect"></select>
+      <button onclick="selectGoal()">Seç</button>
+      <p style="font-size: small;">(Hedef seçimleri herkese görünür.)</p>
+
+      <h3>🎯 Benim Seçtiğim Hedefler</h3>
+      <ul id="myGoals"></ul>
+
+      <h3>👥 Ekiptekilerin Hedefleri</h3>
+      <ul id="teamGoals"></ul>
+    </section>
+
+    <!-- Orta Sütun: Günlük Görevler -->
+    <section class="column">
+      <h2>📅 Günlük Görevler</h2>
+      <ul id="personalTasks"></ul>
+
+      <h3>✅ Bugün Tamamlananlar</h3>
+      <ul id="dailyDone"></ul>
+    </section>
+    <!-- Kullanıcı Görev Ataması -->
+    <div class="card">
+      <h2>📋 Günlük Görev Atama</h2>
+
+      <label for="adminTaskSelect">Görev:</label>
+      <input id="adminTaskSelect"></input>
+      
+      <button onclick="assignTaskToUser2()">➕ Görevi Ata</button>
+      <p id="assignMsg"></p>
+    </div>
+
+    <!-- Sağ Sütun: Lider Tablosu & Performans -->
+    <section class="column">
+      <h2>🏆 Lider Tablosu</h2>
+      <ol id="leaderboard"></ol>
+
+      <h2>📈 Haftalık Performans</h2>
+      <canvas id="weeklyChart" width="300" height="200"></canvas>
+    </section>
+  </main>
+
+  <!-- Admin Panel -->
+  <section id="adminPanel" style="display:none; margin:40px auto; max-width:600px; border:2px solid #00bfff; padding:20px; border-radius:8px;">
+    <h2>👩‍💼 Admin Panel</h2>
+
+    <h3>📋 Görev Atama</h3>
+    <input id="newTaskTitle" placeholder="Görev Başlığı" />
+    <input id="newTaskPoints" type="number" placeholder="Puan (Varsayılan: 10)" />
+    <select id="assignToUser"></select>
+    <button onclick="assignTask()">Görev Ata</button>
+    <p id="assignMessage"></p>
+
+    <h3>🕓 Onay Bekleyen Görevler</h3>
+    <ul id="pendingList"></ul>
+
+    <h3>🕓 Onay Bekleyen Uzun Vadeli Hedefler</h3>
+    
+    <ul id="pendingGoalsList"></ul>
+  </section>
+
+  
+  <script src="script.js"></script>
+</body>
+</html>

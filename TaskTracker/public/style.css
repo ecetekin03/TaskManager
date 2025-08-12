@@ -1,0 +1,152 @@
+/* === Genel === */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #e0f0ff;
+}
+
+header {
+  background: #00bfff;
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+header h1 {
+  margin: 0 0 10px 0;
+}
+
+main.dashboard {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+.column {
+  flex: 1 1 30%;
+  min-width: 280px;
+  margin: 10px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgb(0, 21, 107, 0.1);
+}
+
+.column h2 {
+  margin-top: 0;
+  color: #00bfff;
+}
+
+.column h3 {
+  margin-top: 20px;
+  font-size: 16px;
+  color: #333;
+}
+
+ul, ol {
+  list-style: none;
+  padding-left: 0;
+}
+
+li {
+  background: #f2f9ff;
+  margin: 5px 0;
+  padding: 8px 12px;
+  border-radius: 5px;
+  transition: background 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+li:hover {
+  background: #e0f5ff;
+}
+
+li span {
+  flex: 1;
+}
+
+/* Butonlar */
+button {
+  background: #00bfff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 5px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+button:hover {
+  background: #0088cc;
+}
+
+button.approve {
+  background: #28a745;
+}
+
+button.approve:hover {
+  background: #218838;
+}
+
+button.waiting {
+  background: #ffc107;
+  color: #333;
+}
+
+button.waiting:hover {
+  background: #e0a800;
+}
+
+select, input {
+  width: 100%;
+  padding: 8px;
+  margin: 6px 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* Admin Paneli */
+#adminPanel {
+  background: #fff;
+  margin: 20px auto;
+  padding: 20px;
+  border: 2px solid #00bfff;
+  border-radius: 8px;
+  max-width: 600px;
+}
+
+#adminPanel h2 {
+  margin-top: 0;
+}
+
+#assignMessage {
+  margin-top: 10px;
+  color: green;
+  font-weight: bold;
+}
+
+#pendingList li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#dailyDone li {
+  background: #d4edda;
+  border-left: 5px solid #28a745;
+  color: #155724;
+}
+
+@media (max-width: 900px) {
+  main.dashboard {
+    flex-direction: column;
+  }
+  .column {
+    flex: 1 1 100%;
+  }
+}
