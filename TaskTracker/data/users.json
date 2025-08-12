@@ -1,7 +1,7 @@
 [
   {
     "username": "nergis",
-    "password": "1234",
+    "password": "nergis.1234",
     "fullName": "Nergis Gül",
     "email": "nergis.gul@vestel.com.tr",
     "points": 0,
@@ -10,7 +10,7 @@
   },
   {
     "username": "utku",
-    "password": "1234",
+    "password": "utku.1234",
     "fullName": "Utku Serin",
     "email": "utku.serin@vestel.com.tr",
     "points": 0,
@@ -19,7 +19,7 @@
   },
   {
     "username": "volkan",
-    "password": "1234",
+    "password": "volkan.1234",
     "fullName": "Volkan Alptekin",
     "email": "volkan.alptekin@vestel.com.tr",
     "points": 0,
@@ -28,7 +28,7 @@
   },
   {
     "username": "Gökçe",
-    "password": "1234",
+    "password": "gokce.1234",
     "fullName": "Gökçe Şen",
     "email": "gokce.sen@vestel.com.tr",
     "points": 0,
@@ -37,7 +37,7 @@
   },
   {
     "username": "Kıvanç",
-    "password": "1234",
+    "password": "kivanc.1234",
     "fullName": "Kıvanç Evren",
     "email": "kazimkivanc.evren@vestel.com.tr",
     "points": 0,
@@ -46,7 +46,7 @@
   },
   {
     "username": "Soner",
-    "password": "1234",
+    "password": "soner.1234",
     "fullName": "Soner Alasan",
     "email": "soner.alasan@vestel.com.tr",
     "points": 0,
@@ -55,7 +55,7 @@
   },
   {
     "username": "Ece",
-    "password": "1234",
+    "password": "ece.1234",
     "fullName": "Ece Tekin",
     "email": "etekin1964@gmail.com",
     "points": 0,
@@ -64,7 +64,7 @@
   },
   {
     "username": "Sinan",
-    "password": "1234",
+    "password": "sinan.1234",
     "fullName": "Sinan Ataseven",
     "email": "sinanataseven1022@gmail.com",
     "points": 0,
