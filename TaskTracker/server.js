@@ -287,7 +287,7 @@ app.get("/weeklyStats/:username", (req, res) => {
 // === 5) GÜNLÜK E-MAİL & TEMİZLEME CRON’u ===
 
 cron.schedule(
-  "05 09 * * *",  // Her gün saat 10:50'de çalışır         
+  "00 17 * * *",  // Her gün saat 10:50'de çalışır         
   () => {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: "Europe/Istanbul" });
     console.log("📬 Cron tetiklendi:", new Date().toString());
