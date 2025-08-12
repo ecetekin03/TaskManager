@@ -12,7 +12,7 @@
     "username": "utku",
     "password": "1234",
     "fullName": "Utku Serin",
-    "email": "",
+    "email": "utku.serin@vestel.com.tr",
     "points": 20,
     "level": 1,
     "isAdmin": false
@@ -21,7 +21,7 @@
     "username": "volkan",
     "password": "1234",
     "fullName": "Volkan Alptekin",
-    "email": "",
+    "email": "volkan.alptekin@vestel.com.tr",
     "points": 0,
     "level": 1,
     "isAdmin": true
@@ -30,7 +30,7 @@
     "username": "Gökçe",
     "password": "1234",
     "fullName": "Gökçe Şen",
-    "email": "",
+    "email": "gokce.sen@vestel.com.tr",
     "points": 0,
     "level": 1,
     "isAdmin": false
@@ -39,7 +39,7 @@
     "username": "Kıvanç",
     "password": "1234",
     "fullName": "Kıvanç Evren",
-    "email": "",
+    "email": "kazimkivanc.evren@vestel.com.tr",
     "points": 0,
     "level": 1,
     "isAdmin": false
@@ -48,7 +48,7 @@
     "username": "Soner",
     "password": "1234",
     "fullName": "Soner Alasan",
-    "email": "",
+    "email": "soner.alasan@vestel.com.tr",
     "points": 0,
     "level": 1,
     "isAdmin": false
@@ -60,7 +60,7 @@
     "email": "etekin1964@gmail.com",
     "points": 20,
     "level": 1,
-    "isAdmin": false
+    "isAdmin": true
   },
   {
     "username": "Sinan",
@@ -69,6 +69,6 @@
     "email": "sinanataseven1022@gmail.com",
     "points": 10,
     "level": 1,
-    "isAdmin": false
+    "isAdmin": true
   }
 ]
