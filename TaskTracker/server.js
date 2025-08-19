@@ -205,7 +205,7 @@ app.get("/pendingTasks", (req, res) => {
 
 // Admin: görev onayla
 app.post("/approveTask", (req, res) => {
->>>>>>> 4000fb5 (1)
+
   try {
     const result = await pool.query(
       "SELECT * FROM users WHERE username=$1 AND password=$2",
