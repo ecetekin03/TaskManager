@@ -53,7 +53,11 @@ pool.connect()
 .catch(err => {
   console.error("❌ DB bağlantı hatası:", err.stack);
 });
-
+const cors = require("cors");
+app.use(cors({
+  origin: "*",  // tüm frontendlerden izin verir
+  methods: ["GET", "POST", "PUT", "DELETE"]
+}));
 // --- SMTP Transporter ---
 const transporter = nodemailer.createTransport({
   service: "gmail",
