@@ -27,21 +27,33 @@ let userGoals  = fs.existsSync(USER_GOALS_PATH)
                    : [];
 */
 // --- Veri Tabanı Bağlantısı ---
-const { Pool } = require('pg');
+const { Pool } = require("pg");
 
 const pool = new Pool({
-    user: 'postgres',
-    host: '*',
-    database: 'tasktracker',
-    password: '1',
-    port: 5432,
-    POST /startTask
-    Body: { "username": "...", "taskId": ... }
+  user: "tasktrackerdb_jt2x_user",
+  host: "dpg-d2i4t6je5dus73edmk80-a.frankfurt-postgres.render.com",
+  database: "tasktrackerdb_jt2x",
+  password: "91Gq1DFnW2mTk0YgWEcWx6HLtF6xqtOW",
+  port: 5432,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
-
 pool.connect()
-    .then(() => console.log("Connected!"))
-    .catch(err => console.error(err));
+.then(client => {
+  return client.query('SELECT NOW()')
+    .then(res => {
+      console.log("✅ DB bağlantısı başarılı:", res.rows[0]);
+      client.release();
+    })
+    .catch(err => {
+      console.error("❌ DB sorgu hatası:", err.stack);
+      client.release();
+    });
+})
+.catch(err => {
+  console.error("❌ DB bağlantı hatası:", err.stack);
+});
 
 // --- SMTP Transporter ---
 const transporter = nodemailer.createTransport({
