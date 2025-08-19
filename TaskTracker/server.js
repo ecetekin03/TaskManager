@@ -28,7 +28,6 @@ let userGoals  = fs.existsSync(USER_GOALS_PATH)
 */
 // --- Veri Tabanı Bağlantısı ---
 const { Pool } = require("pg");
-
 const pool = new Pool({
   user: "tasktrackerdb_jt2x_user",
   host: "dpg-d2i4t6je5dus73edmk80-a.frankfurt-postgres.render.com",
