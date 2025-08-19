@@ -17,7 +17,7 @@ const GOALS_PATH        = "./data/goals.json";
 const USER_GOALS_PATH   = "./data/userGoals.json";
 const DAILY_POINTS_PATH = "./data/dailyPoints.json";
 
-// --- Verileri yükle ---
+// --- Verileri yükle --
 /*
 let users      = JSON.parse(fs.readFileSync(USERS_PATH));
 let tasks      = JSON.parse(fs.readFileSync(TASKS_PATH));
