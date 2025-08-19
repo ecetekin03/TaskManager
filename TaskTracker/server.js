@@ -18,12 +18,30 @@ const USER_GOALS_PATH   = "./data/userGoals.json";
 const DAILY_POINTS_PATH = "./data/dailyPoints.json";
 
 // --- Verileri yükle ---
+/*
 let users      = JSON.parse(fs.readFileSync(USERS_PATH));
 let tasks      = JSON.parse(fs.readFileSync(TASKS_PATH));
 let goals      = JSON.parse(fs.readFileSync(GOALS_PATH));
 let userGoals  = fs.existsSync(USER_GOALS_PATH)
                    ? JSON.parse(fs.readFileSync(USER_GOALS_PATH))
                    : [];
+*/
+// --- Veri Tabanı Bağlantısı ---
+const { Pool } = require('pg');
+
+const pool = new Pool({
+    user: 'postgres',
+    host: '*',
+    database: 'tasktracker',
+    password: '1',
+    port: 5432,
+    POST /startTask
+    Body: { "username": "...", "taskId": ... }
+});
+
+pool.connect()
+    .then(() => console.log("Connected!"))
+    .catch(err => console.error(err));
 
 // --- SMTP Transporter ---
 const transporter = nodemailer.createTransport({
