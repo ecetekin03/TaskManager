@@ -13,12 +13,14 @@ app.use(cors({ origin: "*", methods: ["GET","POST","PUT","DELETE"] }));
 
 // --- DB Bağlantısı ---
 const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASS,
-  port: process.env.DB_PORT,
-  ssl: { rejectUnauthorized: false }
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    password: process.env.DB_PASS,
+    port: process.env.DB_PORT,
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 pool.connect()
   .then(client => client.query("SELECT NOW()")
@@ -33,8 +35,177 @@ const transporter = nodemailer.createTransport({
 });
 
 // === 1) AUTH & USER ENDPOINTS ===
-app.post("/login", async (req,res)=>{
-  const { username, password } = req.body;
+
+// Login
+app.post("/login", async (req, res) => {
+    const { username, password } = req.body;
+
+    try {
+        // DB'den kullanıcıyı sorgula
+        const result = await pool.query(
+            "SELECT * FROM users WHERE username = $1 AND password = $2",
+            [username, password]
+        );
+
+        if (result.rows.length > 0) {
+            // Kullanıcı bulundu
+            res.json({ user: result.rows[0] });
+        } else {
+            // Kullanıcı yok veya şifre yanlış
+            res.status(401).json({ message: "Geçersiz kullanıcı!" });
+        }
+    } catch (err) {
+        console.error("Login error:", err);
+        res.status(500).json({ message: "Sunucu hatası!" });
+    }
+});
+
+
+
+// Tüm kullanıcılar (admin dropdown için)
+app.get("/users", (req, res) => {
+  res.json(users.map(u => ({ username: u.username, fullName: u.fullName })));
+});
+
+// Leaderboard
+app.get("/leaderboard", (req, res) => {
+  const lb = users
+    .map(u => ({ fullName: u.fullName, points: u.points, level: u.level }))
+    .sort((a,b) => b.points - a.points);
+  res.json(lb);
+});
+
+// === 2) UZUN VADELİ HEDEFLER AKIŞI ===
+
+// Mevcut hedefler listesi
+app.get("/goals", (req, res) => {
+  res.json(goals);
+});
+
+// Kullanıcının seçtiği hedefler (tüm ekip + durumları)
+app.get("/selectedGoals", (req, res) => {
+  const detailed = userGoals.map(ug => {
+    const g = goals.find(goal => goal.id === ug.goalId);
+    return {
+      username: ug.username,
+      goalId:   ug.goalId,
+      goal:     g ? g.goal   : "N/A",
+      points:   g ? g.points : 0,
+      status:   ug.status
+    };
+  });
+  res.json(detailed);
+});
+
+// Hedef seç
+app.post("/addGoal", (req, res) => {
+  const { username, goalId } = req.body;
+  userGoals.push({ username, goalId, status: "available" });
+  fs.writeFileSync(USER_GOALS_PATH, JSON.stringify(userGoals, null, 2));
+  res.json({ message: "Hedef kaydedildi!" });
+});
+
+// Hedef başlat
+app.post("/startGoal", (req, res) => {
+  const { username, goalId } = req.body;
+  const g = userGoals.find(x=>x.username===username && x.goalId===goalId);
+  if (!g) return res.status(400).json({ message:"Hedef bulunamadı!" });
+  g.status = "in-progress";
+  fs.writeFileSync(USER_GOALS_PATH, JSON.stringify(userGoals, null, 2));
+  res.json({ message:"Hedef başlatıldı!" });
+});
+
+// Hedef bitir → onaya gönder
+app.post("/finishGoal", (req, res) => {
+  const { username, goalId } = req.body;
+  const g = userGoals.find(x=>x.username===username && x.goalId===goalId);
+  if (!g) return res.status(400).json({ message:"Hedef bulunamadı!" });
+  g.status = "pending";
+  fs.writeFileSync(USER_GOALS_PATH, JSON.stringify(userGoals, null, 2));
+  res.json({ message:"Hedef onaya gönderildi!" });
+});
+
+// Admin: onay bekleyen hedefler
+app.get("/pendingGoals", (req, res) => {
+  const pending = userGoals
+    .filter(x => x.status==="pending")
+    .map(x => {
+      const goal = goals.find(gg => gg.id===x.goalId);
+      return { username:x.username, goalId:x.goalId, goal:goal.goal, points:goal.points };
+    });
+  res.json(pending);
+});
+
+// Admin: hedef onayla
+app.post("/approveGoal", (req, res) => {
+  const { username, goalId } = req.body;
+  const g   = userGoals.find(x=>x.username===username && x.goalId===goalId);
+  const usr = users.find(u=>u.username===username);
+  if (!g || !usr) return res.status(400).json({ message:"Onaylanacak hedef bulunamadı!" });
+  g.status = "approved";
+  const goal = goals.find(gg=>gg.id===goalId);
+  usr.points += goal.points;
+  usr.level   = Math.floor(usr.points/50)+1;
+  fs.writeFileSync(USER_GOALS_PATH, JSON.stringify(userGoals, null, 2));
+  fs.writeFileSync(USERS_PATH,      JSON.stringify(users,     null, 2));
+  res.json({ message:"Hedef onaylandı!" });
+});
+
+// === 3) GÜNLÜK GÖREV AKIŞI ===
+
+// Atama (admin)
+
+app.post("/assignTask", (req, res) => {
+  const { title, points, assignedTo } = req.body;
+  const id = Date.now();
+  const pts = Number.isFinite(Number(points)) ? Math.trunc(Number(points)) : 0;
+
+  const assignedAt = new Date().toISOString().slice(0, 10); // YYYY-MM-DD formatında tarih
+
+  tasks.push({ id, title, points: pts, assignedTo, status: "available", assignedAt });
+
+  fs.writeFileSync(TASKS_PATH, JSON.stringify(tasks, null, 2));
+  res.json({ message: "Görev atandı!" });
+});
+
+
+
+// Kullanıcının güncel görevleri
+app.get("/tasks/:username", (req, res) => {
+  res.json(tasks.filter(t=>
+    t.assignedTo===req.params.username &&
+    ["available","in-progress","pending","approved"].includes(t.status)
+  ));
+});
+
+// Başla
+app.post("/startTask", (req, res) => {
+  const { taskId, username } = req.body;
+  const t = tasks.find(x=>x.id===taskId && x.assignedTo===username);
+  if (!t) return res.status(400).json({ message:"Görev bulunamadı!" });
+  t.status = "in-progress";
+  fs.writeFileSync(TASKS_PATH, JSON.stringify(tasks, null, 2));
+  res.json({ message:"Görev başlatıldı!" });
+});
+
+// Bitir → onaya gönder
+app.post("/finishTask", (req, res) => {
+  const { taskId, username } = req.body;
+  const t = tasks.find(x=>x.id===taskId && x.assignedTo===username);
+  if (!t) return res.status(400).json({ message:"Görev bulunamadı!" });
+  t.status = "pending";
+  fs.writeFileSync(TASKS_PATH, JSON.stringify(tasks, null, 2));
+  res.json({ message:"Görev onaya gönderildi!" });
+});
+
+// Admin: onay bekleyen görevler
+app.get("/pendingTasks", (req, res) => {
+  res.json(tasks.filter(t=>t.status==="pending"));
+});
+
+// Admin: görev onayla
+app.post("/approveTask", (req, res) => {
+>>>>>>> 4000fb5 (1)
   try {
     const result = await pool.query(
       "SELECT * FROM users WHERE username=$1 AND password=$2",
