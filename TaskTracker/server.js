@@ -53,11 +53,11 @@ app.post("/login", async (req, res) => {
       SELECT
         username,
         password,
-        "fullName",
+        fullname AS "fullName",   -- tablo: fullname (küçük) → alias ile camelCase
         email,
         points,
         level,
-        isadmin AS "isAdmin"   -- <— kritik
+        COALESCE(isadmin, FALSE) AS "isAdmin"  -- tablo: isadmin (küçük) → alias
       FROM users
       WHERE username = $1 AND password = $2
       `,
@@ -70,10 +70,11 @@ app.post("/login", async (req, res) => {
       res.status(401).json({ message: "Geçersiz kullanıcı!" });
     }
   } catch (err) {
-    console.error("Login error:", err);
+    console.error("Login error:", err); // hatayı logla
     res.status(500).json({ message: "Sunucu hatası!" });
   }
 });
+
 
 
 
