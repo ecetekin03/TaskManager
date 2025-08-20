@@ -288,7 +288,7 @@ cron.schedule("0 17 * * *", async ()=>{
         from: `"Görev Takip" <${process.env.EMAIL_USER}>`,
         to: u.email,
         subject: `${today} Günlük Görev Özeti`,
-        text: `Merhaba ${u."fullName"},\n\nBugün tamamladığın görevler:\n\n${body}`
+        text: `Merhaba ${u.fullName},\n\nBugün tamamladığın görevler:\n\n${body}`
       });
 
       const total = done.reduce((s,t)=>s + (t.points||0), 0);
