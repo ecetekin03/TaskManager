@@ -3,6 +3,37 @@
 // Base URL
 const BASE_URL = "https://taskmanager-m90d.onrender.com";
 
+// --- KEY NORMALIZATION (kritik) ---
+// pg -> JS dönüşünde gelen küçük harfli alanları, UI'nin beklediği camelCase isimlere çeviriyoruz.
+function normalizeKeys(row) {
+  if (!row || typeof row !== "object") return row;
+  const map = {
+    // users
+    fullname: "fullName",
+    isadmin: "isAdmin",
+
+    // tasks
+    assignedto: "assignedTo",
+    approvedat: "approvedAt",
+    assignedat: "assignedAt",
+
+    // goals/user_goals
+    goalid: "goalId",
+
+    // daily_points
+    pointsearned: "pointsEarned",
+  };
+  const out = { ...row };
+  for (const [from, to] of Object.entries(map)) {
+    if (from in out && !(to in out)) {
+      out[to] = out[from];
+      delete out[from];
+    }
+  }
+  return out;
+}
+const normalizeArray = (arr) => Array.isArray(arr) ? arr.map(normalizeKeys) : arr;
+
 // Kullanıcı bilgileri ve yönlendirme
 const user = JSON.parse(localStorage.getItem("user"));
 if (!user) location.href = "login.html";
@@ -23,7 +54,7 @@ if (user.isAdmin) {
 
 async function loadGoals() {
   const res   = await fetch(`${BASE_URL}/goals`);
-  const goals = await res.json();
+  const goals = normalizeArray(await res.json());
   const select = document.getElementById("goalSelect");
   select.innerHTML = `<option value="">Hedef Seç…</option>`;
   goals.forEach(g => {
@@ -47,7 +78,7 @@ async function selectGoal() {
 
 async function loadSelectedGoals() {
   const res      = await fetch(`${BASE_URL}/selectedGoals`);
-  const allGoals = await res.json();
+  const allGoals = normalizeArray(await res.json());
   const myList   = document.getElementById("myGoals");
   const teamList = document.getElementById("teamGoals");
   myList.innerHTML   = "";
@@ -113,7 +144,7 @@ function statusText(status) {
 
 async function loadTasks() {
   const res   = await fetch(`${BASE_URL}/tasks/${user.username}`);
-  const tasks = await res.json();
+  const tasks = normalizeArray(await res.json());
   const ul    = document.getElementById("personalTasks");
   ul.innerHTML = "";
   tasks.forEach(t => {
@@ -144,9 +175,7 @@ async function loadTasks() {
 
 async function devretTask(taskId, btn) {
   if (!confirm("Bu görevi devretmek istediğinize emin misiniz?")) return;
-
   btn.textContent = "Devredildi";
-
   await fetch(`${BASE_URL}/devretTask`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -176,7 +205,7 @@ async function finishTask(id) {
 
 async function loadCompleted() {
   const res  = await fetch(`${BASE_URL}/completed/${user.username}`);
-  const done = await res.json();
+  const done = normalizeArray(await res.json());
   const ul   = document.getElementById("dailyDone");
   ul.innerHTML = "";
   done.forEach(t => {
@@ -188,7 +217,7 @@ async function loadCompleted() {
 
 async function loadLeaderboard() {
   const res = await fetch(`${BASE_URL}/leaderboard`);
-  const data = await res.json();
+  const data = normalizeArray(await res.json());
   const ol = document.getElementById("leaderboard");
   ol.innerHTML = "";
 
@@ -204,12 +233,16 @@ async function loadLeaderboard() {
 
 async function loadWeeklyStats() {
   const res   = await fetch(`${BASE_URL}/weeklyStats/${user.username}`);
-  const stats = await res.json();
+  const stats = normalizeArray(await res.json());
+
   const labels = stats.map(s => {
     const d = new Date(s.date);
-    return ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"][d.getDay()-1] || "Paz";
+    const names = ["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"];
+    return names[d.getDay()] || "Paz";
   });
-  const data = stats.map(s => s.points);
+
+  // backend "pointsEarned" (veya pointsearned) döndürüyor
+  const data = stats.map(s => s.pointsEarned ?? s.points ?? 0);
 
   new Chart(
     document.getElementById("weeklyChart").getContext("2d"),
@@ -225,7 +258,7 @@ async function loadWeeklyStats() {
 
 async function loadUserOptions() {
   const res  = await fetch(`${BASE_URL}/users`);
-  const list = await res.json();
+  const list = normalizeArray(await res.json());
   const sel  = document.getElementById("assignToUser");
   sel.innerHTML = "";
   list.forEach(u => {
@@ -252,7 +285,7 @@ async function assignTask() {
 
 async function loadPendingTasks() {
   const res  = await fetch(`${BASE_URL}/pendingTasks`);
-  const pend = await res.json();
+  const pend = normalizeArray(await res.json());
   const ul   = document.getElementById("pendingList");
   ul.innerHTML = "";
   pend.forEach(t => {
@@ -318,7 +351,7 @@ async function approveTask(id, username, points) {
 
 async function loadPendingGoals() {
   const res  = await fetch(`${BASE_URL}/pendingGoals`);
-  const pend = await res.json();
+  const pend = normalizeArray(await res.json());
   const ul   = document.getElementById("pendingGoalsList");
   ul.innerHTML = "";
   pend.forEach(g => {
@@ -339,9 +372,8 @@ async function approveGoal(goalId, who) {
   });
   loadPendingGoals();
   loadSelectedGoals();
-  const updated = JSON.parse(localStorage.getItem("user"));
-  document.getElementById("points").innerText = updated.points;
-  document.getElementById("level").innerText  = updated.level;
+  // Not: localStorage'daki user obje puan/level'ı otomatik güncellenmiyor.
+  // İstersen burada /users'tan kendi kaydını çekip localStorage'ı güncelleyebilirsin.
 }
 
 // --- İlk yüklemeler ---
