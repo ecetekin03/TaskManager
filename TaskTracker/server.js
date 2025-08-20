@@ -46,27 +46,35 @@ const transporter = nodemailer.createTransport({
 
 // === AUTH ===
 app.post("/login", async (req, res) => {
-    const { username, password } = req.body;
+  const { username, password } = req.body;
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        username,
+        password,
+        "fullName",
+        email,
+        points,
+        level,
+        isadmin AS "isAdmin"   -- <— kritik
+      FROM users
+      WHERE username = $1 AND password = $2
+      `,
+      [username, password]
+    );
 
-    try {
-        // DB'den kullanıcıyı sorgula
-        const result = await pool.query(
-            "SELECT * FROM users WHERE username = $1 AND password = $2",
-            [username, password]
-        );
-
-        if (result.rows.length > 0) {
-            // Kullanıcı bulundu
-            res.json({ user: result.rows[0] });
-        } else {
-            // Kullanıcı yok veya şifre yanlış
-            res.status(401).json({ message: "Geçersiz kullanıcı!" });
-        }
-    } catch (err) {
-        console.error("Login error:", err);
-        res.status(500).json({ message: "Sunucu hatası!" });
+    if (result.rows.length > 0) {
+      res.json({ user: result.rows[0] });
+    } else {
+      res.status(401).json({ message: "Geçersiz kullanıcı!" });
     }
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ message: "Sunucu hatası!" });
+  }
 });
+
 
 
 // === USERS & LEADERBOARD ===
@@ -222,21 +230,6 @@ app.post("/approveGoal", async (req, res) => {
 
 
 // === TASKS ===
-app.post("/_test/insert", async (req,res)=>{
-  try {
-    const r = await pool.query(
-      `INSERT INTO tasks (title, points, assignedto, status, assignetat)
-       VALUES ('Test görev', 10, 'Ece', 'available', $1)
-       RETURNING id`,
-      [new Date().toISOString().slice(0,10)]
-    );
-    res.json({ ok:true, id:r.rows[0].id });
-  } catch (e) {
-    console.error("TEST INSERT hata:", e);
-    res.status(500).json({ ok:false, err:String(e) });
-  }
-});
-
 app.post("/assignTask", async (req,res)=>{
   const { title, points, assignedTo } = req.body;
   const pts = Number.isFinite(Number(points)) ? Math.trunc(Number(points)) : 0;
