@@ -252,7 +252,18 @@ app.get("/tasks/:username", async (req,res)=>{
   const uname = req.params.username;
   try {
     const result = await pool.query(
-      "SELECT * FROM tasks WHERE assignedto=$1 AND status IN ('available','in-progress','pending','approved')",
+      `
+      SELECT
+        id, title, points,
+        assignedto AS "assignedTo",
+        status,
+        assignedat AS "assignedAt",
+        approvedat AS "approvedAt"
+      FROM tasks
+      WHERE LOWER(assignedto) = LOWER($1)
+        AND status IN ('available','in-progress','pending','approved')
+      ORDER BY id DESC
+      `,
       [uname]
     );
     res.json(result.rows);
@@ -261,6 +272,7 @@ app.get("/tasks/:username", async (req,res)=>{
     res.status(500).json({ message:"DB hatası" });
   }
 });
+
 
 app.post("/startTask", async (req,res)=>{
   const { taskId, username } = req.body;
