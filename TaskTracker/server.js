@@ -282,8 +282,7 @@ cron.schedule("0 17 * * *", async ()=>{
       const done = tasksTodayRes.rows.filter(t => t.assignedTo === u.username);
       if (!done.length) continue;
 
-      const body = done.map(t=>`• ${t.title} → ${t.points} puan`).join("
-");
+       const body = done.map(t => `• ${t.title} → ${t.points} puan`).join("\n");
 
       await transporter.sendMail({
         from: `"Görev Takip" <${process.env.EMAIL_USER}>`,
