@@ -91,9 +91,14 @@ app.get("/leaderboard", async (req, res) => {
 });
 
 // === GOALS ===
+// === GOALS ===
 app.get("/goals", async (req, res) => {
   try {
-    const result = await pool.query(`SELECT id, goal, points FROM goals ORDER BY id`);
+    const result = await pool.query(`
+      SELECT id, goal, points
+      FROM goals
+      ORDER BY id
+    `);
     res.json(result.rows);
   } catch (e) {
     res.status(500).json({ message: "DB hatası" });
@@ -106,8 +111,8 @@ app.get("/selectedGoals", async (req, res) => {
       SELECT
         ug.username,
         ug.goalid AS "goalId",
-        COALESCE(g.goal, '(hedef bulunamadı)')  AS goal,
-        COALESCE(g.points, 0)                   AS points,
+        COALESCE(g.goal, '(hedef bulunamadı)') AS goal,
+        COALESCE(g.points, 0)                  AS points,
         ug.status
       FROM user_goals ug
       LEFT JOIN goals g ON ug.goalid = g.id
@@ -122,14 +127,11 @@ app.get("/selectedGoals", async (req, res) => {
 app.post("/addGoal", async (req, res) => {
   const { username, goalId } = req.body;
   try {
-    await pool.query(
-      `
+    await pool.query(`
       INSERT INTO user_goals (username, goalid, status)
       VALUES ($1, $2, 'available')
       ON CONFLICT (username, goalid) DO NOTHING
-      `,
-      [username, goalId]
-    );
+    `, [username, goalId]);
     res.json({ message: "Hedef kaydedildi!" });
   } catch (e) {
     res.status(500).json({ message: "DB hatası" });
@@ -139,10 +141,11 @@ app.post("/addGoal", async (req, res) => {
 app.post("/startGoal", async (req, res) => {
   const { username, goalId } = req.body;
   try {
-    await pool.query(
-      `UPDATE user_goals SET status='in-progress' WHERE username=$1 AND goalid=$2`,
-      [username, goalId]
-    );
+    await pool.query(`
+      UPDATE user_goals
+      SET status='in-progress'
+      WHERE username=$1 AND goalid=$2
+    `, [username, goalId]);
     res.json({ message: "Hedef başlatıldı!" });
   } catch (e) {
     res.status(500).json({ message: "DB hatası" });
@@ -152,10 +155,11 @@ app.post("/startGoal", async (req, res) => {
 app.post("/finishGoal", async (req, res) => {
   const { username, goalId } = req.body;
   try {
-    await pool.query(
-      `UPDATE user_goals SET status='pending' WHERE username=$1 AND goalid=$2`,
-      [username, goalId]
-    );
+    await pool.query(`
+      UPDATE user_goals
+      SET status='pending'
+      WHERE username=$1 AND goalid=$2
+    `, [username, goalId]);
     res.json({ message: "Hedef onaya gönderildi!" });
   } catch (e) {
     res.status(500).json({ message: "DB hatası" });
@@ -185,21 +189,32 @@ app.post("/approveGoal", async (req, res) => {
   const { username, goalId } = req.body;
   try {
     // status'u approved yap
-    await pool.query(
-      `UPDATE user_goals SET status='approved' WHERE username=$1 AND goalid=$2`,
-      [username, goalId]
-    );
+    const upd = await pool.query(`
+      UPDATE user_goals
+      SET status='approved'
+      WHERE username=$1 AND goalid=$2
+      RETURNING 1
+    `, [username, goalId]);
+
+    // (isteğe bağlı güvenlik) kayıt bulunmadıysa:
+    if (upd.rowCount === 0) {
+      return res.status(404).json({ message: "Kayıt bulunamadı" });
+    }
+
     // puanı çek
-    const goalRes = await pool.query(`SELECT points FROM goals WHERE id=$1`, [goalId]);
-    const points = goalRes.rows[0]?.points || 0;
+    const goalRes = await pool.query(`
+      SELECT points FROM goals WHERE id=$1
+    `, [goalId]);
+    const points = goalRes.rows[0]?.points ?? 0;
+
     // kullanıcı puan/level güncelle
-    await pool.query(
-      `UPDATE users
-         SET points = points + $1,
-             level  = floor((points + $1)/50) + 1
-       WHERE username = $2`,
-      [points, username]
-    );
+    await pool.query(`
+      UPDATE users
+      SET points = points + $1,
+          level  = FLOOR((points + $1)/50) + 1
+      WHERE username = $2
+    `, [points, username]);
+
     res.json({ message: "Hedef onaylandı!" });
   } catch (e) {
     res.status(500).json({ message: "DB hatası" });
