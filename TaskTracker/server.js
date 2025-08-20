@@ -5,7 +5,6 @@ const cron = require("node-cron");
 const nodemailer = require("nodemailer");
 const cors = require("cors");
 const { Pool } = require("pg");
-const fs = require("fs");
 
 const app = express();
 app.use(express.json());
@@ -45,8 +44,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// === 1) AUTH & USER ENDPOINTS ===
-// Login
+// === AUTH ===
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -65,28 +63,28 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// Tüm kullanıcılar (admin dropdown için)
-app.get("/users", async (req,res)=>{
+// === USERS & LEADERBOARD ===
+app.get("/users", async (req, res) => {
   try {
     const result = await pool.query("SELECT username, fullName FROM users");
     res.json(result.rows);
-  } catch(e){
-    res.status(500).json({ message:"DB hatası" });
+  } catch (e) {
+    res.status(500).json({ message: "DB hatası" });
   }
 });
 
-// Leaderboard
-app.get("/leaderboard", async (req,res)=>{
+app.get("/leaderboard", async (req, res) => {
   try {
-    const result = await pool.query("SELECT fullName, points, level FROM users ORDER BY points DESC");
+    const result = await pool.query(
+      "SELECT fullName, points, level FROM users ORDER BY points DESC"
+    );
     res.json(result.rows);
-  } catch(e){
-    res.status(500).json({ message:"DB hatası" });
+  } catch (e) {
+    res.status(500).json({ message: "DB hatası" });
   }
 });
 
-// === 2) UZUN VADELİ HEDEFLER AKIŞI ===
-// Mevcut hedefler listesi
+// === GOALS ===
 app.get("/goals", async (req,res)=>{
   try {
     const result = await pool.query("SELECT * FROM goals");
@@ -96,7 +94,6 @@ app.get("/goals", async (req,res)=>{
   }
 });
 
-// Kullanıcının seçtiği hedefler (tüm ekip + durumları)
 app.get("/selectedGoals", async (req,res)=>{
   try {
     const result = await pool.query(
@@ -108,7 +105,6 @@ app.get("/selectedGoals", async (req,res)=>{
   }
 });
 
-// Hedef seç
 app.post("/addGoal", async (req,res)=>{
   const { username, goalId } = req.body;
   try {
@@ -122,7 +118,6 @@ app.post("/addGoal", async (req,res)=>{
   }
 });
 
-// Hedef başlat
 app.post("/startGoal", async (req,res)=>{
   const { username, goalId } = req.body;
   try {
@@ -136,7 +131,6 @@ app.post("/startGoal", async (req,res)=>{
   }
 });
 
-// Hedef bitir → onaya gönder
 app.post("/finishGoal", async (req,res)=>{
   const { username, goalId } = req.body;
   try {
@@ -150,7 +144,6 @@ app.post("/finishGoal", async (req,res)=>{
   }
 });
 
-// Admin: onay bekleyen hedefler
 app.get("/pendingGoals", async (req,res)=>{
   try {
     const result = await pool.query(
@@ -162,7 +155,6 @@ app.get("/pendingGoals", async (req,res)=>{
   }
 });
 
-// Admin: hedef onayla
 app.post("/approveGoal", async (req,res)=>{
   const { username, goalId } = req.body;
   try {
@@ -182,8 +174,7 @@ app.post("/approveGoal", async (req,res)=>{
   }
 });
 
-// === 3) GÜNLÜK GÖREV AKIŞI ===
-// Atama (admin)
+// === TASKS ===
 app.post("/assignTask", async (req,res)=>{
   const { title, points, assignedTo } = req.body;
   const pts = Number.isFinite(Number(points)) ? Math.trunc(Number(points)) : 0;
@@ -199,7 +190,6 @@ app.post("/assignTask", async (req,res)=>{
   }
 });
 
-// Kullanıcının güncel görevleri
 app.get("/tasks/:username", async (req,res)=>{
   const uname = req.params.username;
   try {
@@ -213,7 +203,6 @@ app.get("/tasks/:username", async (req,res)=>{
   }
 });
 
-// Başla
 app.post("/startTask", async (req,res)=>{
   const { taskId, username } = req.body;
   try {
@@ -227,7 +216,6 @@ app.post("/startTask", async (req,res)=>{
   }
 });
 
-// Bitir → onaya gönder
 app.post("/finishTask", async (req,res)=>{
   const { taskId, username } = req.body;
   try {
@@ -241,7 +229,6 @@ app.post("/finishTask", async (req,res)=>{
   }
 });
 
-// Admin: onay bekleyen görevler
 app.get("/pendingTasks", async (req,res)=>{
   try {
     const result = await pool.query("SELECT * FROM tasks WHERE status='pending'");
@@ -251,7 +238,6 @@ app.get("/pendingTasks", async (req,res)=>{
   }
 });
 
-// Admin: görev onayla
 app.post("/approveTask", async (req,res)=>{
   const { taskId, username, points } = req.body;
   const pts = Number.isFinite(Number(points)) ? Math.trunc(Number(points)) : 0;
@@ -270,7 +256,20 @@ app.post("/approveTask", async (req,res)=>{
   }
 });
 
-// === 4) WEEKLY STATS ===
+app.get("/completed/:username", async (req,res)=>{
+  const uname = req.params.username;
+  try {
+    const result = await pool.query(
+      "SELECT * FROM tasks WHERE assignedTo=$1 AND status='approved'",
+      [uname]
+    );
+    res.json(result.rows);
+  } catch(e){
+    res.status(500).json({ message:"DB hatası" });
+  }
+});
+
+// === WEEKLY STATS ===
 app.get("/weeklyStats/:username", async (req,res)=>{
   const uname = req.params.username;
   try {
@@ -284,7 +283,7 @@ app.get("/weeklyStats/:username", async (req,res)=>{
   }
 });
 
-// === 5) DAILY CRON ===
+// === DAILY CRON ===
 cron.schedule("0 17 * * *", async ()=>{
   const today = new Date().toISOString().slice(0,10);
   console.log("📬 Cron tetiklendi:", today);
@@ -326,4 +325,5 @@ cron.schedule("0 17 * * *", async ()=>{
 // === SERVER START ===
 const port = process.env.PORT || 3000;
 app.listen(port, ()=> console.log(`🚀 Server running on port ${port}`));
+
 
