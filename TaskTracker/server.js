@@ -233,6 +233,7 @@ app.post("/approveGoal", async (req, res) => {
 // === TASKS ===
 // === TASKS ===
 app.post("/assignTask", async (req, res) => {
+  console.log("assignTask INCOMING body:", req.body);
   const { title, points, assignedTo } = req.body;
 
   if (!title || !assignedTo) {
@@ -255,7 +256,7 @@ app.post("/assignTask", async (req, res) => {
     res.json({ message: "Görev atandı!", id: r.rows[0].id });
   } catch (e) {
     console.error("assignTask hata:", e);
-    res.status(500).json({ message: "DB hatası" });
+    res.status(500).json({ message:"DB hatası", error: String(e) });
   }
 });
 
