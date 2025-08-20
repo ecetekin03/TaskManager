@@ -288,7 +288,7 @@ cron.schedule("0 17 * * *", async ()=>{
         from: `"Görev Takip" <${process.env.EMAIL_USER}>`,
         to: u.email,
         subject: `${today} Günlük Görev Özeti`,
-        text: `Merhaba ${u."fullName"},
+        text: `Merhaba ${u.fullName},
 
 Bugün tamamladığın görevler:
 
