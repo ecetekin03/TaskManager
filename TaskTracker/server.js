@@ -204,7 +204,7 @@ app.get("/pendingTasks", (req, res) => {
 });
 
 // Admin: görev onayla
-app.post("/approveTask", (req, res) => {
+app.post("/approveTask", async(req, res) => {
 
   try {
     const result = await pool.query(
