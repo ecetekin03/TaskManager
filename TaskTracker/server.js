@@ -91,7 +91,6 @@ app.get("/leaderboard", async (req, res) => {
 });
 
 // === GOALS ===
-// === GOALS ===
 app.get("/goals", async (req, res) => {
   try {
     const result = await pool.query(`
@@ -223,6 +222,21 @@ app.post("/approveGoal", async (req, res) => {
 
 
 // === TASKS ===
+app.post("/_test/insert", async (req,res)=>{
+  try {
+    const r = await pool.query(
+      `INSERT INTO tasks (title, points, assignedto, status, assignetat)
+       VALUES ('Test görev', 10, 'Ece', 'available', $1)
+       RETURNING id`,
+      [new Date().toISOString().slice(0,10)]
+    );
+    res.json({ ok:true, id:r.rows[0].id });
+  } catch (e) {
+    console.error("TEST INSERT hata:", e);
+    res.status(500).json({ ok:false, err:String(e) });
+  }
+});
+
 app.post("/assignTask", async (req,res)=>{
   const { title, points, assignedTo } = req.body;
   const pts = Number.isFinite(Number(points)) ? Math.trunc(Number(points)) : 0;
