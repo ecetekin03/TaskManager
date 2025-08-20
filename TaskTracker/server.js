@@ -207,7 +207,6 @@ app.get("/pendingTasks", (req, res) => {
 app.post("/approveTask", async (req, res) => {
   const { taskId, username, points } = req.body;
   const pts = Number.isFinite(Number(points)) ? Math.trunc(Number(points)) : 0;
->>>>>>> e348aac8bd5edc0c57eda172ac94c6daefcfeee4
 
   try {
     await pool.query(
