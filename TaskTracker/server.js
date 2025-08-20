@@ -243,10 +243,10 @@ app.post("/assignTask", async (req, res) => {
   const assignedAt = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
   try {
-    // DİKKAT: DB kolon adları küçük harf: assignedto, assignetat
+    // DİKKAT: DB kolon adları küçük harf: assignedto, assignedat
     const r = await pool.query(
       `
-      INSERT INTO tasks (title, points, assignedto, status, assignetat)
+      INSERT INTO tasks (title, points, assignedto, status, assignedat)
       VALUES ($1, $2, $3, 'available', $4)
       RETURNING id
       `,
@@ -270,7 +270,7 @@ app.get("/tasks/:username", async (req, res) => {
         points,
         assignedto AS "assignedTo",
         status,
-        assignetat AS "assignedAt",
+        assignedat AS "assignedAt",
         approvedat AS "approvedAt"
       FROM tasks
       WHERE assignedto = $1
@@ -321,7 +321,7 @@ app.get("/pendingTasks", async (req, res) => {
         id, title, points,
         assignedto AS "assignedTo",
         status,
-        assignetat AS "assignedAt",
+        assignedat AS "assignedAt",
         approvedat AS "approvedAt"
       FROM tasks
       WHERE status='pending'
@@ -364,7 +364,7 @@ app.get("/completed/:username", async (req, res) => {
         id, title, points,
         assignedto AS "assignedTo",
         status,
-        assignetat AS "assignedAt",
+        assignedat AS "assignedAt",
         approvedat AS "approvedAt"
       FROM tasks
       WHERE assignedto=$1 AND status='approved'
