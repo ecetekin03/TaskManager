@@ -204,9 +204,6 @@ app.get("/pendingTasks", (req, res) => {
 });
 
 // Admin: görev onayla
-<<<<<<< HEAD
-app.post("/approveTask", async(req, res) => {
-=======
 app.post("/approveTask", async (req, res) => {
   const { taskId, username, points } = req.body;
   const pts = Number.isFinite(Number(points)) ? Math.trunc(Number(points)) : 0;
