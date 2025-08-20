@@ -204,16 +204,27 @@ app.get("/pendingTasks", (req, res) => {
 });
 
 // Admin: görev onayla
+<<<<<<< HEAD
 app.post("/approveTask", async(req, res) => {
+=======
+app.post("/approveTask", async (req, res) => {
+  const { taskId, username, points } = req.body;
+  const pts = Number.isFinite(Number(points)) ? Math.trunc(Number(points)) : 0;
+>>>>>>> e348aac8bd5edc0c57eda172ac94c6daefcfeee4
 
   try {
-    const result = await pool.query(
-      "SELECT * FROM users WHERE username=$1 AND password=$2",
-      [username, password]
+    await pool.query(
+      "UPDATE tasks SET status='approved', points=$1, approvedAt=NOW() WHERE id=$2 AND assignedTo=$3",
+      [pts, taskId, username]
     );
-    if(result.rows.length) res.json({ user: result.rows[0] });
-    else res.status(401).json({ message:"Geçersiz kullanıcı!" });
-  } catch(e){ res.status(500).json({ message:"DB hatası" }); }
+    await pool.query(
+      "UPDATE users SET points=points+$1, level=floor((points+$1)/50)+1 WHERE username=$2",
+      [pts, username]
+    );
+    res.json({ message:"Görev onaylandı!" });
+  } catch(e) {
+    res.status(500).json({ message:"DB hatası" });
+  }
 });
 
 app.get("/users", async (req,res)=>{
