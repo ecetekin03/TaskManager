@@ -231,99 +231,154 @@ app.post("/approveGoal", async (req, res) => {
 
 
 // === TASKS ===
-app.post("/assignTask", async (req,res)=>{
+// === TASKS ===
+app.post("/assignTask", async (req, res) => {
   const { title, points, assignedTo } = req.body;
+
+  if (!title || !assignedTo) {
+    return res.status(400).json({ message: "title ve assignedTo zorunlu" });
+  }
+
   const pts = Number.isFinite(Number(points)) ? Math.trunc(Number(points)) : 0;
-  const assignedAt = new Date().toISOString().slice(0,10);
+  const assignedAt = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
   try {
-    await pool.query(
-      "INSERT INTO tasks(title,points,assignedTo,status,assignedAt) VALUES($1,$2,$3,'available',$4)",
-      [title,pts,assignedTo,assignedAt]
+    // DİKKAT: DB kolon adları küçük harf: assignedto, assignetat
+    const r = await pool.query(
+      `
+      INSERT INTO tasks (title, points, assignedto, status, assignetat)
+      VALUES ($1, $2, $3, 'available', $4)
+      RETURNING id
+      `,
+      [title, pts, assignedTo, assignedAt]
     );
-    res.json({ message:"Görev atandı!" });
-  } catch(e){
-    res.status(500).json({ message:"DB hatası" });
+    res.json({ message: "Görev atandı!", id: r.rows[0].id });
+  } catch (e) {
+    console.error("assignTask DB hatası:", e);
+    res.status(500).json({ message: "DB hatası" });
   }
 });
 
-app.get("/tasks/:username", async (req,res)=>{
+app.get("/tasks/:username", async (req, res) => {
   const uname = req.params.username;
   try {
     const result = await pool.query(
-      "SELECT * FROM tasks WHERE assignedTo=$1 AND status IN ('available','in-progress','pending','approved')",
+      `
+      SELECT
+        id,
+        title,
+        points,
+        assignedto AS "assignedTo",
+        status,
+        assignetat AS "assignedAt",
+        approvedat AS "approvedAt"
+      FROM tasks
+      WHERE assignedto = $1
+        AND status IN ('available','in-progress','pending','approved')
+      ORDER BY id DESC
+      `,
       [uname]
     );
     res.json(result.rows);
-  } catch(e){
-    res.status(500).json({ message:"DB hatası" });
+  } catch (e) {
+    console.error("tasks list DB hatası:", e);
+    res.status(500).json({ message: "DB hatası" });
   }
 });
 
-app.post("/startTask", async (req,res)=>{
+app.post("/startTask", async (req, res) => {
   const { taskId, username } = req.body;
   try {
-    await pool.query(
-      "UPDATE tasks SET status='in-progress' WHERE id=$1 AND assignedTo=$2",
+    const r = await pool.query(
+      `UPDATE tasks SET status='in-progress' WHERE id=$1 AND assignedto=$2`,
       [taskId, username]
     );
-    res.json({ message:"Görev başlatıldı!" });
-  } catch(e){
-    res.status(500).json({ message:"DB hatası" });
+    res.json({ message: r.rowCount ? "Görev başlatıldı!" : "Kayıt bulunamadı" });
+  } catch (e) {
+    console.error("startTask DB hatası:", e);
+    res.status(500).json({ message: "DB hatası" });
   }
 });
 
-app.post("/finishTask", async (req,res)=>{
+app.post("/finishTask", async (req, res) => {
   const { taskId, username } = req.body;
   try {
-    await pool.query(
-      "UPDATE tasks SET status='pending' WHERE id=$1 AND assignedTo=$2",
+    const r = await pool.query(
+      `UPDATE tasks SET status='pending' WHERE id=$1 AND assignedto=$2`,
       [taskId, username]
     );
-    res.json({ message:"Görev onaya gönderildi!" });
-  } catch(e){
-    res.status(500).json({ message:"DB hatası" });
+    res.json({ message: r.rowCount ? "Görev onaya gönderildi!" : "Kayıt bulunamadı" });
+  } catch (e) {
+    console.error("finishTask DB hatası:", e);
+    res.status(500).json({ message: "DB hatası" });
   }
 });
 
-app.get("/pendingTasks", async (req,res)=>{
+app.get("/pendingTasks", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM tasks WHERE status='pending'");
+    const result = await pool.query(`
+      SELECT
+        id, title, points,
+        assignedto AS "assignedTo",
+        status,
+        assignetat AS "assignedAt",
+        approvedat AS "approvedAt"
+      FROM tasks
+      WHERE status='pending'
+      ORDER BY id DESC
+    `);
     res.json(result.rows);
-  } catch(e){
-    res.status(500).json({ message:"DB hatası" });
+  } catch (e) {
+    console.error("pendingTasks DB hatası:", e);
+    res.status(500).json({ message: "DB hatası" });
   }
 });
 
-app.post("/approveTask", async (req,res)=>{
+app.post("/approveTask", async (req, res) => {
   const { taskId, username, points } = req.body;
   const pts = Number.isFinite(Number(points)) ? Math.trunc(Number(points)) : 0;
   try {
-    await pool.query(
-      "UPDATE tasks SET status='approved', points=$1, approvedAt=NOW() WHERE id=$2 AND assignedTo=$3",
+    const r1 = await pool.query(
+      `UPDATE tasks SET status='approved', points=$1, approvedat=NOW() WHERE id=$2 AND assignedto=$3`,
       [pts, taskId, username]
     );
+    if (!r1.rowCount) return res.status(404).json({ message: "Kayıt bulunamadı" });
+
     await pool.query(
-      "UPDATE users SET points=points+$1, level=floor((points+$1)/50)+1 WHERE username=$2",
+      `UPDATE users SET points=points+$1, level=floor((points+$1)/50)+1 WHERE username=$2`,
       [pts, username]
     );
-    res.json({ message:"Görev onaylandı!" });
-  } catch(e){
-    res.status(500).json({ message:"DB hatası" });
+    res.json({ message: "Görev onaylandı!" });
+  } catch (e) {
+    console.error("approveTask DB hatası:", e);
+    res.status(500).json({ message: "DB hatası" });
   }
 });
 
-app.get("/completed/:username", async (req,res)=>{
+app.get("/completed/:username", async (req, res) => {
   const uname = req.params.username;
   try {
     const result = await pool.query(
-      "SELECT * FROM tasks WHERE assignedTo=$1 AND status='approved'",
+      `
+      SELECT
+        id, title, points,
+        assignedto AS "assignedTo",
+        status,
+        assignetat AS "assignedAt",
+        approvedat AS "approvedAt"
+      FROM tasks
+      WHERE assignedto=$1 AND status='approved'
+      ORDER BY approvedat DESC NULLS LAST, id DESC
+      `,
       [uname]
     );
     res.json(result.rows);
-  } catch(e){
-    res.status(500).json({ message:"DB hatası" });
+  } catch (e) {
+    console.error("completed list DB hatası:", e);
+    res.status(500).json({ message: "DB hatası" });
   }
 });
+
 
 // === WEEKLY STATS ===
 app.get("/weeklyStats/:username", async (req,res)=>{
