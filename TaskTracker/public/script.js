@@ -253,57 +253,79 @@ async function loadLeaderboard() {
   });
 }
 
-// --- Haftalık Performans Grafiği ---
-function parseDateSafe(val) {
-  if (val instanceof Date) return val;
-  if (typeof val !== "string") return new Date(NaN);
-  let v = val.trim();
-
-  // ISO veya datetime ise direkt dene
-  if (v.includes("T") || v.includes(" ")) return new Date(v);
-
-  // Y-M-D / Y-MM-D / Y-M-DD / Y-MM-DD → sıfırla ve ISO'ya çevir
-  const m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if (m) {
-    const y = +m[1], mn = String(+m[2]).padStart(2, "0"), d = String(+m[3]).padStart(2, "0");
-    return new Date(`${y}-${mn}-${d}T00:00:00`);
-  }
-
-  // "+03" gibi ekleri varsa kırp
-  if (v.includes("+")) {
-    const n = v.split("+")[0];
-    if (/^\d{4}-\d{2}-\d{2}$/.test(n)) return new Date(`${n}T00:00:00`);
-  }
-
-  return new Date(v);
+// --- Haftalık Performans Grafiği (sadece hafta içi: Pzt–Cum) ---
+function ymdKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 async function loadWeeklyStats() {
-  const cvs = document.getElementById("weeklyChart");
-  if (!cvs || typeof Chart === "undefined") return;
+  const canvas = document.getElementById("weeklyChart");
+  if (!canvas || typeof Chart === "undefined") return;
 
-  const res = await fetch(`${BASE_URL}/weeklyStats/${user.username}`);
-  const stats = normalizeArray(await res.json()) || [];
+  try {
+    // Veriyi çek
+    const res = await fetch(`${BASE_URL}/weeklyStats/${user.username}`);
+    if (!res.ok) throw new Error("Haftalık istatistik alınamadı");
+    const stats = normalizeArray(await res.json()) || [];
 
-  // Yalnızca son 7 kayıt
-  const last7 = stats.slice(-7);
+    // Tarih -> puan haritası (YYYY-MM-DD -> pointsEarned)
+    const pointsMap = new Map();
+    for (const s of stats) {
+      // s.date "YYYY-MM-DD" ise doğrudan anahtar olarak kullan
+      const key = String(s.date).slice(0, 10);
+      const val = Number(s.pointsEarned ?? s.points ?? 0);
+      pointsMap.set(key, (pointsMap.get(key) || 0) + val);
+    }
 
-  const labels = last7.map(s => {
-    const d = new Date(`${s.date}T00:00:00`);
-    return d.toLocaleDateString("tr-TR", { weekday: "short" }); // Pzt, Sal, ...
-  });
-  const data = last7.map(s => s.pointsEarned ?? 0);
+    // Bu haftanın Pazartesisini bul (Pzt=1, JS getDay: Paz=0)
+    const today = new Date();
+    const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()); // 00:00
+    const dow = midnight.getDay();              // 0..6  (0=Paz)
+    const diffToMonday = (dow + 6) % 7;         // Pzt için 0
+    const monday = new Date(midnight);
+    monday.setDate(midnight.getDate() - diffToMonday);
 
-  if (window.__weeklyChart) window.__weeklyChart.destroy();
-  window.__weeklyChart = new Chart(cvs.getContext("2d"), {
-    type: "bar",
-    data: { labels, datasets: [{ label: "Günlük Puan", data, backgroundColor: "#00bfff" }] },
-    options: { responsive: true, maintainAspectRatio: true, aspectRatio: 2, scales: { y: { beginAtZero: true } } }
-  });
+    // Pazartesi–Cuma 5 günü üret
+    const weekdays = Array.from({ length: 5 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d;
+    });
+
+    // Etiketler ve veri
+    const labels = weekdays.map(d =>
+      d.toLocaleDateString("tr-TR", { weekday: "short" }) // Pzt, Sal, Çar, Per, Cum
+    );
+
+    const data = weekdays.map(d => {
+      const key = ymdKey(d);
+      return pointsMap.get(key) ?? 0;
+    });
+
+    // Önceki grafik varsa temizle
+    if (window.__weeklyChart) window.__weeklyChart.destroy();
+
+    window.__weeklyChart = new Chart(canvas.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{ label: "Günlük Puan", data, backgroundColor: "#00bfff" }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 2,                 // genişlik/yükseklik oranı
+        scales: { y: { beginAtZero: true } },
+        plugins: { legend: { display: true } },
+      },
+    });
+  } catch (e) {
+    console.error(e);
+  }
 }
-
-
-
 
 
 // --- Admin: Görev Atama & Onaylar ---
