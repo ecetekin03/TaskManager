@@ -399,6 +399,83 @@ app.get("/weeklyStats/:username", async (req,res)=>{
     res.status(500).json({ message:"DB hatası" });
   }
 });
+// === DAILY CRON ADMIN ===
+// Her gün 17:00'da Europe/Istanbul saatine göre çalışır
+cron.schedule("55 10 * * *", async () => {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  console.log("📬 Admin Cron tetiklendi:", today);
+
+  try {
+    // 1) BUGÜN onaylanan tüm görevleri çek (İstanbul gününe göre)
+    const tasksRes = await pool.query(`
+      SELECT id, title, points, assignedto, approvedat
+      FROM tasks
+      WHERE status = 'approved'
+        AND ((approvedat AT TIME ZONE 'Europe/Istanbul')::date = $1::date)
+      ORDER BY assignedto, id
+    `, [today]);
+
+    if (tasksRes.rows.length === 0) {
+      console.log("⚠️ Bugün onaylanan (approved) görev yok");
+      return;
+    }
+
+    // 2) Kullanıcı bazında grupla
+    const grouped = {};
+    for (const t of tasksRes.rows) {
+      if (!grouped[t.assignedto]) grouped[t.assignedto] = [];
+      grouped[t.assignedto].push(t);
+    }
+
+    // 3) Mail gövdesini hazırla (her kullanıcı için liste + kişi toplamı + genel toplam)
+    let body = `Merhaba ${u.fullname},\n\n${today} tarihi itibariyle onaylanan görevler:\n\n`;
+    let grandTotal = 0;
+
+    for (const [username, tasks] of Object.entries(grouped)) {
+      const userTotal = tasks.reduce((s, t) => s + Number(t.points || 0), 0);
+      grandTotal += userTotal;
+
+      body += `👤 ${username} (Toplam: ${userTotal} puan)\n`;
+      tasks.forEach(t => {
+        body += `   • ${t.title} → ${t.points} puan\n`;
+      });
+      body += `\n`;
+    }
+
+    body += `============================\nGENEL TOPLAM: ${grandTotal} puan\n`;
+
+    // 4) Admin kullanıcılarını bul
+    const adminsRes = await pool.query(`
+      SELECT username, email, fullname
+      FROM users
+      WHERE isadmin = true AND username = 'Sinan'
+    `);
+
+    if (adminsRes.rows.length === 0) {
+      console.log("⚠️ Admin bulunamadı; mail gönderilmeyecek");
+      return;
+    }
+
+    // 5) Her admin’e mail gönder
+    for (const a of adminsRes.rows) {
+      try {
+        await transporter.sendMail({
+          from: `"Görev Takip" <${process.env.EMAIL_USER}>`,
+          to: a.email,
+          subject: `${today} Onaylanan Görevler Özeti`,
+          text: body
+        });
+        console.log(`📧 Admin mail gönderildi: ${a.username}`);
+      } catch (mailErr) {
+        console.error(`❌ Admin mail gönderilemedi (${a.username}):`, mailErr);
+      }
+    }
+
+    console.log("✅ Admin Cron tamamlandı:", today);
+  } catch (e) {
+    console.error("Admin Cron hatası:", e);
+  }
+}, { timezone: "Europe/Istanbul" });
 
 // === DAILY CRON ADMIN ===
 // Her gün 17.00'da Europe/Istanbul saatine göre çalışır
@@ -428,7 +505,7 @@ cron.schedule("00 17 * * *", async () => {
     }
 
     // 3) Mail gövdesi hazırla
-    let body = `Merhaba Admin,\n\nBugün itibariyle onay bekleyen görevler:\n\n`;
+    let body = `Merhaba ${u.fullname},\n\nBugün itibariyle onay bekleyen görevler:\n\n`;
     for (const [username, tasks] of Object.entries(grouped)) {
       body += `👤 ${username}:\n`;
       tasks.forEach(t => {
@@ -467,8 +544,8 @@ cron.schedule("00 17 * * *", async () => {
 
 
 // === DAILY CRON ===
-// Her gün 09:35'te Europe/Istanbul saatine göre çalışır
-cron.schedule("25 10 * * *", async () => {
+// Her gün 17:30'te Europe/Istanbul saatine göre çalışır
+cron.schedule("30 17 * * *", async () => {
   // Bugünün tarihi (YYYY-MM-DD)
   const today = new Date().toISOString().slice(0, 10);
   console.log("📬 Cron tetiklendi:", today);
