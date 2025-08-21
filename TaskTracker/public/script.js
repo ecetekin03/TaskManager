@@ -185,7 +185,7 @@ async function devretTask(taskId, btn) {
 
 async function assignTaskToMe() {
   const title  = document.getElementById("adminTaskSelect").value;
-  const points = 10; // istersen input ekleyip puanı da alabilirsin
+  const points = 0; // istersen input ekleyip puanı da alabilirsin
 
   if (!title) return alert("Görev boş olamaz!");
 
