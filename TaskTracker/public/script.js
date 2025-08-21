@@ -256,53 +256,35 @@ async function loadLeaderboard() {
 // --- Haftalık Performans Grafiği ---
 async function loadWeeklyStats() {
   const canvas = document.getElementById("weeklyChart");
-  // Canvas yoksa veya Chart yüklü değilse sessizce çık
   if (!canvas || typeof Chart === "undefined") return;
 
   try {
     const res = await fetch(`${BASE_URL}/weeklyStats/${user.username}`);
     if (!res.ok) throw new Error("Haftalık istatistik alınamadı");
-    const statsRaw = await res.json();
-    const stats = normalizeArray(statsRaw) || [];
-
-    // Son 7 kayıt (DB zaten tarihe göre ASC ise)
+    const stats = normalizeArray(await res.json()) || [];
     const last7 = stats.slice(-7);
 
-    // Etiketler: TR kısa gün adı (daha tutarlı)
-    const labels = last7.map(s => {
-      // s.date -> "YYYY-MM-DD"
-      // Zaman dilimi kayması yaşamamak için safe parse:
-      const d = new Date(`${s.date}T00:00:00`);
-      return d.toLocaleDateString("tr-TR", { weekday: "short" });
-    });
+    const labels = last7.map(s => new Date(`${s.date}T00:00:00`).toLocaleDateString("tr-TR",{weekday:"short"}));
+    const data   = last7.map(s => s.pointsEarned ?? 0);
 
-    const data = last7.map(s => s.pointsEarned ?? 0);
-
-    // Önceki grafik var ise temizle
-    if (window.__weeklyChart) {
-      window.__weeklyChart.destroy();
-    }
+    if (window.__weeklyChart) window.__weeklyChart.destroy();
 
     window.__weeklyChart = new Chart(canvas.getContext("2d"), {
       type: "bar",
-      data: {
-        labels,
-        datasets: [
-          { label: "Günlük Puan", data, backgroundColor: "#00bfff" }
-        ],
-      },
+      data: { labels, datasets: [{ label: "Günlük Puan", data, backgroundColor: "#00bfff" }] },
       options: {
         responsive: true,
-        maintainAspectRatio: false,
+        maintainAspectRatio: true,   // ← geri açtık
+        aspectRatio: 2,              // genişlik/yükseklik oranı (2:1)
         scales: { y: { beginAtZero: true } },
-        plugins: { legend: { display: true } }
+        plugins: { legend: { display: true } },
       }
     });
   } catch (e) {
     console.error(e);
-    // İstersen kullanıcıya ufak bir mesaj da gösterebilirsin
   }
 }
+
 
 
 // --- Admin: Görev Atama & Onaylar ---
