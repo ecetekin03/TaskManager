@@ -48,6 +48,7 @@ if (user.isAdmin) {
   loadUserOptions();
   loadPendingTasks();
   loadPendingGoals();
+  loadActiveTasks();
 }
 
 // --- Uzun Vadeli Hedefler ---
@@ -173,15 +174,6 @@ async function loadTasks() {
   });
 }
 
-async function devretTask(taskId, btn) {
-  if (!confirm("Bu görevi devretmek istediğinize emin misiniz?")) return;
-  btn.textContent = "Devredildi";
-  await fetch(`${BASE_URL}/devretTask`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: user.username, taskId }),
-  });
-}
 
 async function assignTaskToMe() {
   const title  = document.getElementById("adminTaskSelect").value;
@@ -364,6 +356,32 @@ async function loadPendingTasks() {
     li.appendChild(rightControls);
     ul.appendChild(li);
   });
+}
+async function loadActiveTasks() {
+  const ul = document.getElementById("activeTasksList");
+  if (!ul) return; // Bu sayfada değilse sessiz geç
+
+  try {
+    const res = await fetch(`${BASE_URL}/activeTasks`);
+    if (!res.ok) throw new Error("Aktif görevler alınamadı");
+    const active = await res.json();
+
+    ul.innerHTML = "";
+    if (!active.length) {
+      ul.innerHTML = "<li>Şu anda aktif görev bulunmuyor.</li>";
+      return;
+    }
+
+    active.forEach(t => {
+      const durum = t.status === "in-progress" ? "Devam Ediyor" : "Başlamadı";
+      const li = document.createElement("li");
+      li.textContent = `${t.fullName} → ${t.title} (${t.points} puan) [${durum}]`;
+      ul.appendChild(li);
+    });
+  } catch (e) {
+    console.error(e);
+    ul.innerHTML = "<li>Hata: veriler alınamadı.</li>";
+  }
 }
 
 // Onay fonksiyonu
