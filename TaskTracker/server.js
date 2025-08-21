@@ -400,6 +400,72 @@ app.get("/weeklyStats/:username", async (req,res)=>{
   }
 });
 
+// === DAILY CRON ADMIN ===
+// Her gün 09:45'te Europe/Istanbul saatine göre çalışır
+cron.schedule("05 10 * * *", async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  console.log("📬 Admin Cron tetiklendi:", today);
+
+  try {
+    // 1) Bugün hala 'pending' durumda olan TÜM görevleri çek
+    const tasksRes = await pool.query(`
+      SELECT id, title, points, assignedto, assignetat
+      FROM tasks
+      WHERE status = 'pending'
+      ORDER BY assignedto, id
+    `);
+
+    if (tasksRes.rows.length === 0) {
+      console.log("⚠️ Onay bekleyen görev yok");
+      return;
+    }
+
+    // 2) Onay bekleyen görevleri kullanıcı bazında grupla
+    const grouped = {};
+    for (const t of tasksRes.rows) {
+      if (!grouped[t.assignedto]) grouped[t.assignedto] = [];
+      grouped[t.assignedto].push(t);
+    }
+
+    // 3) Mail gövdesi hazırla
+    let body = `Merhaba Admin,\n\nBugün itibariyle onay bekleyen görevler:\n\n`;
+    for (const [username, tasks] of Object.entries(grouped)) {
+      body += `👤 ${username}:\n`;
+      tasks.forEach(t => {
+        body += `   • ${t.title} → ${t.points} puan\n`;
+      });
+      body += "\n";
+    }
+
+    // 4) Admin kullanıcılarını bul
+    const adminsRes = await pool.query(`
+      SELECT username, email, fullname
+      FROM users
+      WHERE isadmin = true AND WHERE username=Sinan
+    `);
+
+    // 5) Her admin’e mail gönder
+    for (const a of adminsRes.rows) {
+      try {
+        await transporter.sendMail({
+          from: `"Görev Takip" <${process.env.EMAIL_USER}>`,
+          to: a.email,
+          subject: `${today} Onay Bekleyen Görevler`,
+          text: body
+        });
+        console.log(`📧 Admin mail gönderildi: ${a.username}`);
+      } catch (mailErr) {
+        console.error(`❌ Admin mail gönderilemedi (${a.username}):`, mailErr);
+      }
+    }
+
+    console.log("✅ Admin Cron tamamlandı:", today);
+  } catch (e) {
+    console.error("Admin Cron hatası:", e);
+  }
+}, { timezone: "Europe/Istanbul" });
+
+
 // === DAILY CRON ===
 // Her gün 09:35'te Europe/Istanbul saatine göre çalışır
 cron.schedule("45 09 * * *", async () => {
@@ -464,8 +530,6 @@ cron.schedule("45 09 * * *", async () => {
     console.error("Cron hatası:", e);
   }
 }, { timezone: "Europe/Istanbul" });
-
-
 // === SERVER START ===
 const port = process.env.PORT || 3000;
 app.listen(port, ()=> console.log(`🚀 Server running on port ${port}`));
