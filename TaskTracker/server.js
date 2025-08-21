@@ -230,7 +230,7 @@ app.post("/approveGoal", async (req, res) => {
 });
 
 
-// === TASKS ===
+
 // === TASKS ===
 app.post("/assignTask", async (req, res) => {
   console.log("assignTask INCOMING body:", req.body);
@@ -333,6 +333,27 @@ app.get("/pendingTasks", async (req, res) => {
     res.json(result.rows);
   } catch (e) {
     console.error("pendingTasks hata:", e);
+    res.status(500).json({ message: "DB hatası" });
+  }
+});
+// Admin görünümü: TÜM görevleri listele
+app.get("/allTasks", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        id,
+        title,
+        points,
+        assignedto  AS "assignedTo",
+        status,
+        assignetat  AS "assignedAt",
+        approvedat  AS "approvedAt"
+      FROM tasks
+      ORDER BY id DESC
+    `);
+    res.json(result.rows);
+  } catch (e) {
+    console.error("allTasks hata:", e);
     res.status(500).json({ message: "DB hatası" });
   }
 });
