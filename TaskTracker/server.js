@@ -402,7 +402,7 @@ app.get("/weeklyStats/:username", async (req,res)=>{
 
 // === DAILY CRON ADMIN ===
 // Her gün 09:45'te Europe/Istanbul saatine göre çalışır
-cron.schedule("05 10 * * *", async () => {
+cron.schedule("09 10 * * *", async () => {
   const today = new Date().toISOString().slice(0, 10);
   console.log("📬 Admin Cron tetiklendi:", today);
 
@@ -441,7 +441,7 @@ cron.schedule("05 10 * * *", async () => {
     const adminsRes = await pool.query(`
       SELECT username, email, fullname
       FROM users
-      WHERE isadmin = true AND WHERE username=Sinan
+      WHERE isadmin = true AND username = 'Sinan'
     `);
 
     // 5) Her admin’e mail gönder
