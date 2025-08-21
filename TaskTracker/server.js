@@ -401,38 +401,70 @@ app.get("/weeklyStats/:username", async (req,res)=>{
 });
 
 // === DAILY CRON ===
-cron.schedule("35 09 * * *", async ()=>{
-  const today = new Date().toISOString().slice(0,10);
+// Her gün 09:35'te Europe/Istanbul saatine göre çalışır
+cron.schedule("45 09 * * *", async () => {
+  // Bugünün tarihi (YYYY-MM-DD)
+  const today = new Date().toISOString().slice(0, 10);
   console.log("📬 Cron tetiklendi:", today);
+
   try {
-    const usersRes = await pool.query("SELECT * FROM users");
-    const tasksRes = await pool.query("SELECT * FROM tasks WHERE status='approved'");
-    for(const u of usersRes.rows){
-      const done = tasksRes.rows.filter(
-        t=>t.assignedto===u.username && t.approvedat?.startsWith(today)
-      );
-      if(!done.length) continue;
-      const body = done.map(t=>`• ${t.title} → ${t.points} puan`).join("\n");
-      await transporter.sendMail({
-        from: `"Görev Takip" <${process.env.EMAIL_USER}>`,
-        to: u.email,
-        subject: `${today} Günlük Görev Özeti`,
-        text: `Merhaba ${u.fullname},\n\nBugün tamamladığın görevler:\n\n${body}`
-      });
-      const total = done.reduce((s,t)=>s+t.points,0);
-      await pool.query(
-        "INSERT INTO daily_points(username,date,pointsEarned) VALUES($1,$2,$3)",
-        [u.username,today,total]
-      );
-    }
-    await pool.query(
-      "DELETE FROM tasks WHERE status='approved' AND approvedAt::text LIKE $1",
-      [`${today}%`]
+    // 1) Sadece BUGÜN onaylanan görevleri DB'den çek (JS'te string kıyasına gerek kalmasın)
+    // approvedat timestamptz ise, Istanbul gününe göre tarih almak için AT TIME ZONE kullanalım:
+    const tasksRes = await pool.query(
+      `
+      SELECT id, title, points, assignedto, approvedat
+      FROM tasks
+      WHERE status = 'approved'
+        AND ((approvedat AT TIME ZONE 'Europe/Istanbul')::date = $1::date)
+      `,
+      [today]
     );
-  } catch(e){
+
+    // Kullanıcıları çek
+    const usersRes = await pool.query("SELECT username, email, fullname FROM users");
+
+    // 2) Kullanıcı bazında e-posta gönder
+    for (const u of usersRes.rows) {
+      const done = tasksRes.rows.filter(t => t.assignedto === u.username);
+      if (!done.length) continue;
+
+      const body = done.map(t => `• ${t.title} → ${t.points} puan`).join("\n");
+      const total = done.reduce((s, t) => s + Number(t.points || 0), 0);
+
+      try {
+        await transporter.sendMail({
+          from: `"Görev Takip" <${process.env.EMAIL_USER}>`,
+          to: u.email,
+          subject: `${today} Günlük Görev Özeti`,
+          text: `Merhaba ${u.fullname},\n\nBugün tamamladığın görevler:\n\n${body}\n\nToplam: ${total} puan`
+        });
+
+        // 3) Günlük özet tablosuna yaz
+        await pool.query(
+          "INSERT INTO daily_points (username, date, pointsEarned) VALUES ($1, $2, $3)",
+          [u.username, today, total]
+        );
+      } catch (mailErr) {
+        console.error(`❌ Mail gönderilemedi (${u.username}):`, mailErr);
+      }
+    }
+
+    // 4) Bugün onaylanan görevleri sil (İstanbul gününe göre)
+    await pool.query(
+      `
+      DELETE FROM tasks
+      WHERE status='approved'
+        AND ((approvedat AT TIME ZONE 'Europe/Istanbul')::date = $1::date)
+      `,
+      [today]
+    );
+
+    console.log("✅ Cron tamamlandı:", today);
+  } catch (e) {
     console.error("Cron hatası:", e);
   }
-},{ timezone:"Europe/Istanbul" });
+}, { timezone: "Europe/Istanbul" });
+
 
 // === SERVER START ===
 const port = process.env.PORT || 3000;
