@@ -279,40 +279,29 @@ function parseDateSafe(val) {
 }
 
 async function loadWeeklyStats() {
-  const canvas = document.getElementById("weeklyChart");
-  if (!canvas || typeof Chart === "undefined") return;
+  const cvs = document.getElementById("weeklyChart");
+  if (!cvs || typeof Chart === "undefined") return;
 
-  try {
-    const res = await fetch(`${BASE_URL}/weeklyStats/${user.username}`);
-    if (!res.ok) throw new Error("Haftalık istatistik alınamadı");
-    const stats = normalizeArray(await res.json()) || [];
-    const last7 = stats.slice(-7);
+  const res = await fetch(`${BASE_URL}/weeklyStats/${user.username}`);
+  const stats = normalizeArray(await res.json()) || [];
 
-    const dayNames = ["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"];
-    const labels = last7.map(s => {
-      const d = parseDateSafe(s.date);
-      return isNaN(d) ? String(s.date) : dayNames[d.getDay()];
-    });
+  // Yalnızca son 7 kayıt
+  const last7 = stats.slice(-7);
 
-    const data = last7.map(s => s.pointsEarned ?? 0);
+  const labels = last7.map(s => {
+    const d = new Date(`${s.date}T00:00:00`);
+    return d.toLocaleDateString("tr-TR", { weekday: "short" }); // Pzt, Sal, ...
+  });
+  const data = last7.map(s => s.pointsEarned ?? 0);
 
-    if (window.__weeklyChart) window.__weeklyChart.destroy();
-
-    window.__weeklyChart = new Chart(canvas.getContext("2d"), {
-      type: "bar",
-      data: { labels, datasets: [{ label: "Günlük Puan", data, backgroundColor: "#00bfff" }] },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 2,
-        scales: { y: { beginAtZero: true } },
-        plugins: { legend: { display: true } }
-      }
-    });
-  } catch (e) {
-    console.error(e);
-  }
+  if (window.__weeklyChart) window.__weeklyChart.destroy();
+  window.__weeklyChart = new Chart(cvs.getContext("2d"), {
+    type: "bar",
+    data: { labels, datasets: [{ label: "Günlük Puan", data, backgroundColor: "#00bfff" }] },
+    options: { responsive: true, maintainAspectRatio: true, aspectRatio: 2, scales: { y: { beginAtZero: true } } }
+  });
 }
+
 
 
 
