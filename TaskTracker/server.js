@@ -378,16 +378,20 @@ app.post("/approveTask", async (req, res) => {
       [pts, username]
     );
 
-    // 🔽🔽🔽 BURASI YENİ: Bugünün puanını daily_points'e ekle
-    await pool.query(
-      `
+    // daily_points'e ekle (UNIQUE gerektirmez)
+    await pool.query(`
+      WITH up AS (
+        UPDATE daily_points
+           SET pointsEarned = pointsEarned + $2
+         WHERE username = $1
+           AND date = (NOW() AT TIME ZONE 'Europe/Istanbul')::date
+         RETURNING 1
+      )
       INSERT INTO daily_points (username, date, pointsEarned)
-      VALUES ($1, (NOW() AT TIME ZONE 'Europe/Istanbul')::date, $2)
-      ON CONFLICT (username, date)
-      DO UPDATE SET pointsEarned = daily_points.pointsEarned + EXCLUDED.pointsEarned
-      `,
-      [username, pts]
-    );
+      SELECT $1, (NOW() AT TIME ZONE 'Europe/Istanbul')::date, $2
+      WHERE NOT EXISTS (SELECT 1 FROM up)
+    `, [username, pts]);
+
 
     res.json({ message: "Görev onaylandı!" });
   } catch (e) {
