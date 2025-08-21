@@ -402,7 +402,7 @@ app.get("/weeklyStats/:username", async (req,res)=>{
 
 // === DAILY CRON ADMIN ===
 // Her gün 09:45'te Europe/Istanbul saatine göre çalışır
-cron.schedule("09 10 * * *", async () => {
+cron.schedule("14 10 * * *", async () => {
   const today = new Date().toISOString().slice(0, 10);
   console.log("📬 Admin Cron tetiklendi:", today);
 
