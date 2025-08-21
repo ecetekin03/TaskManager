@@ -401,7 +401,7 @@ app.get("/weeklyStats/:username", async (req,res)=>{
 });
 // === DAILY CRON ADMIN ===
 // Her gün 17:00'da Europe/Istanbul saatine göre çalışır
-cron.schedule("55 10 * * *", async () => {
+cron.schedule("02 11 * * *", async () => {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   console.log("📬 Admin Cron tetiklendi:", today);
 
@@ -428,7 +428,7 @@ cron.schedule("55 10 * * *", async () => {
     }
 
     // 3) Mail gövdesini hazırla (her kullanıcı için liste + kişi toplamı + genel toplam)
-    let body = `Merhaba ${u.fullname},\n\n${today} tarihi itibariyle onaylanan görevler:\n\n`;
+    let body = `Merhaba Admin,\n\n${today} tarihi itibariyle onaylanan görevler:\n\n`;
     let grandTotal = 0;
 
     for (const [username, tasks] of Object.entries(grouped)) {
@@ -505,7 +505,7 @@ cron.schedule("00 17 * * *", async () => {
     }
 
     // 3) Mail gövdesi hazırla
-    let body = `Merhaba ${u.fullname},\n\nBugün itibariyle onay bekleyen görevler:\n\n`;
+    let body = `Merhaba Admin,\n\nBugün itibariyle onay bekleyen görevler:\n\n`;
     for (const [username, tasks] of Object.entries(grouped)) {
       body += `👤 ${username}:\n`;
       tasks.forEach(t => {
