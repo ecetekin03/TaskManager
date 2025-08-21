@@ -399,9 +399,9 @@ app.get("/weeklyStats/:username", async (req,res)=>{
     res.status(500).json({ message:"DB hatası" });
   }
 });
-// === DAILY CRON ADMIN ===
-// Her gün 17:00'da Europe/Istanbul saatine göre çalışır
-cron.schedule("02 11 * * *", async () => {
+// === DAILY CRON ADMIN Onay ===
+// Her gün 17:29'da Europe/Istanbul saatine göre çalışır
+cron.schedule("29 17 * * *", async () => {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   console.log("📬 Admin Cron tetiklendi:", today);
 
@@ -442,13 +442,11 @@ cron.schedule("02 11 * * *", async () => {
       body += `\n`;
     }
 
-    body += `============================\nGENEL TOPLAM: ${grandTotal} puan\n`;
-
     // 4) Admin kullanıcılarını bul
     const adminsRes = await pool.query(`
       SELECT username, email, fullname
       FROM users
-      WHERE isadmin = true AND username = 'Sinan'
+      WHERE isadmin = true 
     `);
 
     if (adminsRes.rows.length === 0) {
