@@ -468,7 +468,7 @@ cron.schedule("00 17 * * *", async () => {
 
 // === DAILY CRON ===
 // Her gün 09:35'te Europe/Istanbul saatine göre çalışır
-cron.schedule("19 10 * * *", async () => {
+cron.schedule("25 10 * * *", async () => {
   // Bugünün tarihi (YYYY-MM-DD)
   const today = new Date().toISOString().slice(0, 10);
   console.log("📬 Cron tetiklendi:", today);
