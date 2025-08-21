@@ -405,7 +405,28 @@ app.get("/completed/:username", async (req, res) => {
   }
 });
 
-
+// Aktif görevler: in-progress + available
+app.get("/activeTasks", async (req, res) => {
+  try {
+    const q = await pool.query(`
+      SELECT
+        u.fullname AS "fullName",
+        t.title,
+        t.points,
+        t.status
+      FROM tasks t
+      JOIN users u ON LOWER(u.username) = LOWER(t.assignedto)
+      WHERE t.status IN ('available','in-progress')
+      ORDER BY 
+        CASE t.status WHEN 'in-progress' THEN 0 ELSE 1 END,
+        t.id DESC
+    `);
+    res.json(q.rows);
+  } catch (e) {
+    console.error("activeTasks hata:", e);
+    res.status(500).json({ message: "DB hatası" });
+  }
+});
 
 // === WEEKLY STATS ===
 app.get("/weeklyStats/:username", async (req,res)=>{
