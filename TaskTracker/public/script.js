@@ -183,6 +183,38 @@ async function devretTask(taskId, btn) {
   });
 }
 
+async function assignTaskToMe() {
+  const title  = document.getElementById("adminTaskSelect").value;
+  const points = 10; // istersen input ekleyip puanı da alabilirsin
+
+  if (!title) return alert("Görev boş olamaz!");
+
+  // giriş yapan kullanıcını localStorage’dan oku
+  const currentUser = JSON.parse(localStorage.getItem("user"));
+  if (!currentUser) return alert("Kullanıcı bilgisi bulunamadı!");
+
+  try {
+    const res = await fetch(`${BASE_URL}/assignTask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title,
+        points,
+        assignedTo: currentUser.username   // ✨ burası kritik
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.message || "Görev atanamadı");
+
+    document.getElementById("assignMsg").innerText = "✔️ Görev atandı";
+    loadTasks(); // var olan görevleri yeniden yükle
+  } catch (e) {
+    console.error(e);
+    alert("Görev atanamadı: " + e.message);
+  }
+}
+
 async function startTask(id) {
   await fetch(`${BASE_URL}/startTask`, {
     method: "POST",
