@@ -254,6 +254,30 @@ async function loadLeaderboard() {
 }
 
 // --- Haftalık Performans Grafiği ---
+function parseDateSafe(val) {
+  if (val instanceof Date) return val;
+  if (typeof val !== "string") return new Date(NaN);
+  let v = val.trim();
+
+  // ISO veya datetime ise direkt dene
+  if (v.includes("T") || v.includes(" ")) return new Date(v);
+
+  // Y-M-D / Y-MM-D / Y-M-DD / Y-MM-DD → sıfırla ve ISO'ya çevir
+  const m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) {
+    const y = +m[1], mn = String(+m[2]).padStart(2, "0"), d = String(+m[3]).padStart(2, "0");
+    return new Date(`${y}-${mn}-${d}T00:00:00`);
+  }
+
+  // "+03" gibi ekleri varsa kırp
+  if (v.includes("+")) {
+    const n = v.split("+")[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(n)) return new Date(`${n}T00:00:00`);
+  }
+
+  return new Date(v);
+}
+
 async function loadWeeklyStats() {
   const canvas = document.getElementById("weeklyChart");
   if (!canvas || typeof Chart === "undefined") return;
@@ -264,8 +288,13 @@ async function loadWeeklyStats() {
     const stats = normalizeArray(await res.json()) || [];
     const last7 = stats.slice(-7);
 
-    const labels = last7.map(s => new Date(`${s.date}T00:00:00`).toLocaleDateString("tr-TR",{weekday:"short"}));
-    const data   = last7.map(s => s.pointsEarned ?? 0);
+    const dayNames = ["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"];
+    const labels = last7.map(s => {
+      const d = parseDateSafe(s.date);
+      return isNaN(d) ? String(s.date) : dayNames[d.getDay()];
+    });
+
+    const data = last7.map(s => s.pointsEarned ?? 0);
 
     if (window.__weeklyChart) window.__weeklyChart.destroy();
 
@@ -274,16 +303,17 @@ async function loadWeeklyStats() {
       data: { labels, datasets: [{ label: "Günlük Puan", data, backgroundColor: "#00bfff" }] },
       options: {
         responsive: true,
-        maintainAspectRatio: true,   // ← geri açtık
-        aspectRatio: 2,              // genişlik/yükseklik oranı (2:1)
+        maintainAspectRatio: true,
+        aspectRatio: 2,
         scales: { y: { beginAtZero: true } },
-        plugins: { legend: { display: true } },
+        plugins: { legend: { display: true } }
       }
     });
   } catch (e) {
     console.error(e);
   }
 }
+
 
 
 
