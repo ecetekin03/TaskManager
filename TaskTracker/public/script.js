@@ -415,4 +415,3 @@ loadTasks();
 loadCompleted();
 loadLeaderboard();
 loadWeeklyStats();
-loadPendingTasks();
