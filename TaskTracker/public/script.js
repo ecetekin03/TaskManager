@@ -254,29 +254,56 @@ async function loadLeaderboard() {
 }
 
 // --- Haftalık Performans Grafiği ---
-
 async function loadWeeklyStats() {
-  const res   = await fetch(`${BASE_URL}/weeklyStats/${user.username}`);
-  const stats = normalizeArray(await res.json());
+  const canvas = document.getElementById("weeklyChart");
+  // Canvas yoksa veya Chart yüklü değilse sessizce çık
+  if (!canvas || typeof Chart === "undefined") return;
 
-  const labels = stats.map(s => {
-    const d = new Date(s.date);
-    const names = ["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"];
-    return names[d.getDay()] || "Paz";
-  });
+  try {
+    const res = await fetch(`${BASE_URL}/weeklyStats/${user.username}`);
+    if (!res.ok) throw new Error("Haftalık istatistik alınamadı");
+    const statsRaw = await res.json();
+    const stats = normalizeArray(statsRaw) || [];
 
-  // backend "pointsEarned" (veya pointsearned) döndürüyor
-  const data = stats.map(s => s.pointsEarned ?? s.points ?? 0);
+    // Son 7 kayıt (DB zaten tarihe göre ASC ise)
+    const last7 = stats.slice(-7);
 
-  new Chart(
-    document.getElementById("weeklyChart").getContext("2d"),
-    {
-      type: "bar",
-      data: { labels, datasets: [{ label: "Günlük Puan", data, backgroundColor: "#00bfff" }] },
-      options: { scales: { y: { beginAtZero: true } } }
+    // Etiketler: TR kısa gün adı (daha tutarlı)
+    const labels = last7.map(s => {
+      // s.date -> "YYYY-MM-DD"
+      // Zaman dilimi kayması yaşamamak için safe parse:
+      const d = new Date(`${s.date}T00:00:00`);
+      return d.toLocaleDateString("tr-TR", { weekday: "short" });
+    });
+
+    const data = last7.map(s => s.pointsEarned ?? 0);
+
+    // Önceki grafik var ise temizle
+    if (window.__weeklyChart) {
+      window.__weeklyChart.destroy();
     }
-  );
+
+    window.__weeklyChart = new Chart(canvas.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { label: "Günlük Puan", data, backgroundColor: "#00bfff" }
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true } },
+        plugins: { legend: { display: true } }
+      }
+    });
+  } catch (e) {
+    console.error(e);
+    // İstersen kullanıcıya ufak bir mesaj da gösterebilirsin
+  }
 }
+
 
 // --- Admin: Görev Atama & Onaylar ---
 
