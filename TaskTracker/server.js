@@ -336,28 +336,6 @@ app.get("/pendingTasks", async (req, res) => {
     res.status(500).json({ message: "DB hatası" });
   }
 });
-// Tüm kullanıcıların görevlerini getir (admin görünümü için)
-app.get("/tasksAll", async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT
-        id,
-        title,
-        points,
-        assignedto AS "assignedTo",
-        status,
-        assignetat AS "assignedAt",
-        approvedat AS "approvedAt"
-      FROM tasks
-      WHERE status IN ('available','in-progress','pending','approved')
-      ORDER BY assignedto, id DESC
-    `);
-    res.json(result.rows);
-  } catch (e) {
-    console.error("tasksAll hata:", e);
-    res.status(500).json({ message: "DB hatası" });
-  }
-});
 
 app.post("/approveTask", async (req, res) => {
   const { taskId, username, points } = req.body;
