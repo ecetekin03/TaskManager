@@ -543,7 +543,7 @@ cron.schedule("00 17 * * *", async () => {
 
 // === DAILY CRON ===
 // Her gün 17:30'te Europe/Istanbul saatine göre çalışır
-cron.schedule("15 11 * * *", async () => {
+cron.schedule("30 17 * * *", async () => {
   // Bugünün tarihi (YYYY-MM-DD)
   const today = new Date().toISOString().slice(0, 10);
   console.log("📬 Cron tetiklendi:", today);
@@ -564,7 +564,7 @@ cron.schedule("15 11 * * *", async () => {
     // Kullanıcıları çek
     const usersRes = await pool.query("SELECT username, email, fullname FROM users");
 
-    /*// 2) Kullanıcı bazında e-posta gönder
+    // 2) Kullanıcı bazında e-posta gönder
     for (const u of usersRes.rows) {
       const done = tasksRes.rows.filter(t => t.assignedto === u.username);
       if (!done.length) continue;
@@ -589,7 +589,7 @@ cron.schedule("15 11 * * *", async () => {
         console.error(`❌ Mail gönderilemedi (${u.username}):`, mailErr);
       }
     }
-*/
+
     // 4) Bugün onaylanan görevleri sil (İstanbul gününe göre)
     await pool.query(
       `
