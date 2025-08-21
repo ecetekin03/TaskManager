@@ -37,6 +37,7 @@ if (!user.isAdmin) location.href = "index.html";
 window.addEventListener("DOMContentLoaded", async () => {
   await loadUsers();
   await loadPendingTasks();
+  await loadAllUserTasks();
 });
 
 // Kullanıcı listesini doldur (görev atamak için)
@@ -153,6 +154,81 @@ async function loadPendingTasks() {
     console.error("Onay bekleyen görevler yüklenemedi:", err);
   }
 }
+// Küçük yardımcı: tarih biçimleme
+const fmtDate = (d) => {
+  if (!d) return "-";
+  const dt = new Date(d);
+  return isNaN(dt) ? String(d) : dt.toLocaleDateString("tr-TR");
+};
+
+// Kullanıcıların TÜM görevlerini ve durumlarını getirir
+async function loadAllUserTasks() {
+  const list = document.getElementById("allTasksList");
+  if (!list) return; // admin.html'de kart yoksa sessizce çık
+  list.innerHTML = "";
+
+  try {
+    const res = await fetch(`${BASE_URL}/allTasks`);
+    const rows = normalizeArray(await res.json());
+
+    // Basit bir sıralama: pending → in-progress → available → approved
+    const order = (s) =>
+      s === "pending" ? 0 :
+      s === "in-progress" ? 1 :
+      s === "available" ? 2 :
+      s === "approved" ? 3 : 9;
+
+    rows.sort((a, b) => order(a.status) - order(b.status));
+
+    rows.forEach(t => {
+      const li = document.createElement("li");
+      li.style.display = "flex";
+      li.style.alignItems = "center";
+      li.style.justifyContent = "space-between";
+      li.style.marginBottom = "8px";
+      li.style.padding = "8px";
+      li.style.background = "#f0f9f0";
+      li.style.borderRadius = "6px";
+
+      // Sol taraf: Kullanıcı → Başlık (Puan)
+      const left = document.createElement("div");
+      left.style.flex = "1";
+      left.textContent = `${t.assignedTo ?? "-"} → ${t.title} (${t.points ?? 0} puan)`;
+
+      // Sağ taraf: Tarihler + statü rozeti
+      const right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.alignItems = "center";
+      right.style.gap = "8px";
+
+      const meta = document.createElement("span");
+      meta.style.fontSize = "12px";
+      meta.style.color = "#666";
+      meta.textContent = `Atandı: ${fmtDate(t.assignedAt)} · Onay: ${fmtDate(t.approvedAt)}`;
+
+      const badge = document.createElement("span");
+      badge.textContent = (t.status || "-");
+      badge.style.padding = "4px 8px";
+      badge.style.borderRadius = "12px";
+      badge.style.fontSize = "12px";
+      badge.style.background = "#e8f5e9";
+      badge.style.border = "1px solid #c8e6c9";
+      badge.style.textTransform = "capitalize";
+
+      right.appendChild(meta);
+      right.appendChild(badge);
+      li.appendChild(left);
+      li.appendChild(right);
+      list.appendChild(li);
+    });
+  } catch (err) {
+    console.error("Tüm görevler yüklenemedi:", err);
+    const li = document.createElement("li");
+    li.textContent = "❌ Görev listesi yüklenirken bir hata oluştu.";
+    list.appendChild(li);
+  }
+}
+
 
 // Admin onaylama işlemi (backend: POST /approveTask)
 async function approveTask(taskId, username, points) {
@@ -165,6 +241,7 @@ async function approveTask(taskId, username, points) {
     const data = await res.json();
     alert(data.message || "✔️ Görev onaylandı.");
     await loadPendingTasks();
+    await loadAllUserTasks();
   } catch (err) {
     alert("❌ Onaylama işlemi başarısız oldu.");
     console.error("Onay hatası:", err);
