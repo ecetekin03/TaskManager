@@ -361,23 +361,41 @@ app.get("/allTasks", async (req, res) => {
 app.post("/approveTask", async (req, res) => {
   const { taskId, username, points } = req.body;
   const pts = Number.isFinite(Number(points)) ? Math.trunc(Number(points)) : 0;
+
   try {
     const r1 = await pool.query(
-      `UPDATE tasks SET status='approved', points=$1, approvedat=NOW() WHERE id=$2 AND LOWER(assignedto)=LOWER($3)`,
+      `UPDATE tasks 
+         SET status='approved', points=$1, approvedat=NOW() 
+       WHERE id=$2 AND LOWER(assignedto)=LOWER($3)`,
       [pts, taskId, username]
     );
     if (!r1.rowCount) return res.status(404).json({ message: "Kayıt bulunamadı" });
 
     await pool.query(
-      `UPDATE users SET points=points+$1, level=floor((points+$1)/50)+1 WHERE username=$2`,
+      `UPDATE users 
+         SET points=points+$1, level=floor((points+$1)/50)+1 
+       WHERE username=$2`,
       [pts, username]
     );
+
+    // 🔽🔽🔽 BURASI YENİ: Bugünün puanını daily_points'e ekle
+    await pool.query(
+      `
+      INSERT INTO daily_points (username, date, pointsEarned)
+      VALUES ($1, (NOW() AT TIME ZONE 'Europe/Istanbul')::date, $2)
+      ON CONFLICT (username, date)
+      DO UPDATE SET pointsEarned = daily_points.pointsEarned + EXCLUDED.pointsEarned
+      `,
+      [username, pts]
+    );
+
     res.json({ message: "Görev onaylandı!" });
   } catch (e) {
     console.error("approveTask hata:", e);
     res.status(500).json({ message: "DB hatası" });
   }
 });
+
 
 app.get("/completed/:username", async (req, res) => {
   const uname = req.params.username;
