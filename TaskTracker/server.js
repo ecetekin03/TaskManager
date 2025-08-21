@@ -401,7 +401,7 @@ app.get("/weeklyStats/:username", async (req,res)=>{
 });
 
 // === DAILY CRON ===
-cron.schedule("0 17 * * *", async ()=>{
+cron.schedule("35 09 * * *", async ()=>{
   const today = new Date().toISOString().slice(0,10);
   console.log("📬 Cron tetiklendi:", today);
   try {
