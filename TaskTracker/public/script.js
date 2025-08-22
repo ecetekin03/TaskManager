@@ -478,13 +478,15 @@ async function loadApprovedTasks() {
     if (!res.ok) throw new Error("Onaylanmış görevler alınamadı");
     const approved = normalizeArray(await res.json());
 
+    console.log("✅ approved verisi:", approved); // Debug için
+
     ul.innerHTML = "";
     if (!approved.length) {
       ul.innerHTML = "<li>✅ Onaylanmış görev yok.</li>";
       return;
     }
 
-    // kullanıcıya göre grupla (fullname bazlı)
+    // Kullanıcıya göre grupla (fullname üzerinden)
     const grouped = {};
     approved.forEach(t => {
       if (!grouped[t.fullname]) grouped[t.fullname] = [];
@@ -503,6 +505,7 @@ async function loadApprovedTasks() {
     ul.innerHTML = "<li>Hata: Onaylanmış görevler alınamadı.</li>";
   }
 }
+
 
 
 async function approveGoal(goalId, who) {
