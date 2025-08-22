@@ -465,12 +465,7 @@ app.get("/activeTasks", async (req, res) => {
 app.get("/approvedTasks", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT 
-        t.id, 
-        t.title, 
-        t.points, 
-        t.assignedto, 
-        u.fullname AS fullname
+      SELECT t.id, t.title, t.points, u.fullname
       FROM tasks t
       JOIN users u ON t.assignedto = u.username
       WHERE t.status = 'approved'
@@ -482,6 +477,7 @@ app.get("/approvedTasks", async (req, res) => {
     res.status(500).json({ error: "Onaylanmış görevler alınamadı" });
   }
 });
+
 
 
 
