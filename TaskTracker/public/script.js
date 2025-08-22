@@ -416,7 +416,7 @@ async function loadActiveTasks() {
   try {
     const res = await fetch(`${BASE_URL}/activeTasks`);
     if (!res.ok) throw new Error("Aktif görevler alınamadı");
-    const active = await res.json();
+     const active = normalizeArray(await res.json());
 
     ul.innerHTML = "";
     if (!active.length) {
