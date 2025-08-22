@@ -235,6 +235,7 @@ app.post("/approveGoal", async (req, res) => {
 app.post("/assignTask", async (req, res) => {
   console.log("assignTask INCOMING body:", req.body);
   const { title, points, assignedTo } = req.body;
+  
 
   if (!title || !assignedTo) {
     return res.status(400).json({ message: "title ve assignedTo zorunlu" });
@@ -243,6 +244,16 @@ app.post("/assignTask", async (req, res) => {
   const pts = Number.isFinite(Number(points)) ? Math.trunc(Number(points)) : 0;
   const assignedAt = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
+  // ❗ Aynı görev aynı kullanıcıya atanmış mı kontrol et
+  const check = await pool.query(
+    `SELECT 1 FROM tasks WHERE title=$1 AND assignedto=$2 AND status IN ('available','in-progress')`,
+    [title, assignedTo]
+  );
+  
+  if (check.rowCount > 0) {
+    return res.status(400).json({ message: "Bu görev zaten eklenmiş!" });
+  }
+  
   try {
     // DİKKAT: DB kolonu assignetat (şu anki şeman böyle)
     const r = await pool.query(
