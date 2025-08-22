@@ -462,20 +462,23 @@ app.get("/activeTasks", async (req, res) => {
   }
 });
 
-app.get("/approved-tasks", async (req, res) => {
+// --- Onaylanmış Görevler ---
+app.get("/approvedTasks", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT t.id, t.title, t.points, t.assignedto, t.approvedat
+      SELECT t.id, t.title, t.points, t.assignedto, u.fullname
       FROM tasks t
+      JOIN users u ON t.assignedto = u.username
       WHERE t.status = 'approved'
-      ORDER BY t.assignedto, t.approvedat DESC
+      ORDER BY u.fullname ASC, t.id DESC
     `);
     res.json(result.rows);
   } catch (err) {
-    console.error("❌ Onaylanmış görevler alınamadı:", err);
-    res.status(500).json({ error: "Sunucu hatası" });
+    console.error("approvedTasks error", err);
+    res.status(500).json({ error: "Onaylanmış görevler alınamadı" });
   }
 });
+
 
 
 // === WEEKLY STATS ===
