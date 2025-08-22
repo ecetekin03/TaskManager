@@ -169,7 +169,9 @@ async function loadTasks() {
         btn = `<span class="approved">Tamamlandı</span>`;
         break;
     }
-    li.innerHTML = `${t.title} (${t.points} puan) ${btn}`;
+    // ✨ assignAt bilgisini ekledim
+    const dateText = t.assignedAt ? `📅 ${t.assignedAt}` : "";
+    li.innerHTML = `${t.title} (${t.points} puan) ${dateText} ${btn}`;
     ul.appendChild(li);
   });
 }
@@ -425,7 +427,10 @@ async function loadActiveTasks() {
     active.forEach(t => {
       const durum = t.status === "in-progress" ? "Devam Ediyor" : "Başlamadı";
       const li = document.createElement("li");
-      li.textContent = `${t.fullName} → ${t.title} (${t.points} puan) [${durum}]`;
+     // ✨ Tarih eklendi
+    const dateText = t.assignedAt ? `📅 ${t.assignedAt}` : "";
+    li.textContent = `${t.fullName} → ${t.title} (${t.points} puan) [${durum}] ${dateText}`;
+
       ul.appendChild(li);
     });
   } catch (e) {
