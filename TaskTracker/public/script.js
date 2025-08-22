@@ -469,6 +469,7 @@ async function loadPendingGoals() {
   });
 }
 // --- Onaylanmış Görevler ---
+// --- Onaylanmış Görevler ---
 async function loadApprovedTasks() {
   const ul = document.getElementById("loadApprovedTasks");
   if (!ul) return; // sayfada yoksa boş geç
@@ -478,19 +479,17 @@ async function loadApprovedTasks() {
     if (!res.ok) throw new Error("Onaylanmış görevler alınamadı");
     const approved = normalizeArray(await res.json());
 
-    console.log("✅ approved verisi:", approved); // Debug için
-
     ul.innerHTML = "";
     if (!approved.length) {
       ul.innerHTML = "<li>✅ Onaylanmış görev yok.</li>";
       return;
     }
 
-    // Kullanıcıya göre grupla (fullname üzerinden)
+    // kullanıcıya göre grupla
     const grouped = {};
     approved.forEach(t => {
-      if (!grouped[t.fullname]) grouped[t.fullname] = [];
-      grouped[t.fullname].push(t);
+      if (!grouped[t.assignedTo]) grouped[t.assignedTo] = [];
+      grouped[t.assignedTo].push(t);
     });
 
     for (const [who, tasks] of Object.entries(grouped)) {
@@ -505,6 +504,7 @@ async function loadApprovedTasks() {
     ul.innerHTML = "<li>Hata: Onaylanmış görevler alınamadı.</li>";
   }
 }
+
 
 
 
