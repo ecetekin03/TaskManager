@@ -464,23 +464,19 @@ app.get("/activeTasks", async (req, res) => {
 
 app.get("/approvedTasks", async (req, res) => { 
   try { 
-    const result = await pool.query( 
-      SELECT t.id, t.title, t.points, t.assignedto, u.fullname 
-      FROM tasks t 
-      JOIN users u ON t.assignedto = u.username 
-      WHERE t.status = 'approved' 
-      ORDER BY u.fullname ASC, t.id DESC 
-    ); 
+    const result = await pool.query(`
+      SELECT t.id, t.title, t.points, t.assignedto, u.fullname
+      FROM tasks t
+      JOIN users u ON t.assignedto = u.username
+      WHERE t.status = 'approved'
+      ORDER BY u.fullname ASC, t.id DESC
+    `); 
     res.json(result.rows); 
   } catch (err) { 
     console.error("approvedTasks error", err); 
     res.status(500).json({ error: "Onaylanmış görevler alınamadı" }); 
   } 
 });
-
-
-
-
 
 
 // === WEEKLY STATS ===
