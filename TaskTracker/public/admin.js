@@ -38,6 +38,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   await loadUsers();
   await loadPendingTasks();
   await loadAllUserTasks();
+  await loadApprovedTasks();
 });
 
 // Kullanıcı listesini doldur (görev atamak için)
