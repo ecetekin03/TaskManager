@@ -553,7 +553,7 @@ cron.schedule("29 17 * * *", async () => {
 
 // === DAILY CRON ADMIN ===
 // Her gün 17.00'da Europe/Istanbul saatine göre çalışır
-cron.schedule("00 17 * * *", async () => {
+cron.schedule("20 13 * * *", async () => {
   const today = new Date().toISOString().slice(0, 10);
   console.log("📬 Admin Cron tetiklendi:", today);
 
@@ -588,11 +588,13 @@ cron.schedule("00 17 * * *", async () => {
       body += "\n";
     }
 
+    body += `\nGörevleri buradan takip edebilirsin: https://taskmanager-m90d.onrender.com/login.html\n\nİyi çalışmalar!`;
+
     // 4) Admin kullanıcılarını bul
     const adminsRes = await pool.query(`
       SELECT username, email, fullname
       FROM users
-      WHERE isadmin = true
+      WHERE isadmin = true AND username=('Ece','Sinan')
     `);
 
     // 5) Her admin’e mail gönder
