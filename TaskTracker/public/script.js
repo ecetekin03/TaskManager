@@ -170,7 +170,7 @@ async function loadTasks() {
         break;
     }
     // ✨ assignAt bilgisini ekledim
-    const dateText = t.assignedAt ? `📅 ${t.assignedAt}` : "";
+    const dateText = t.assignedAt ? `📅 ${t.assignedAt.slice(0, 10)}` : "";
     li.innerHTML = `${t.title} (${t.points} puan) ${dateText} ${btn}`;
     ul.appendChild(li);
   });
