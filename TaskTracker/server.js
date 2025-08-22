@@ -462,6 +462,22 @@ app.get("/activeTasks", async (req, res) => {
   }
 });
 
+app.get("/approved-tasks", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT t.id, t.title, t.points, t.assignedto, t.approvedat
+      FROM tasks t
+      WHERE t.status = 'approved'
+      ORDER BY t.assignedto, t.approvedat DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Onaylanmış görevler alınamadı:", err);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
+});
+
+
 // === WEEKLY STATS ===
 app.get("/weeklyStats/:username", async (req,res)=>{
   const uname = req.params.username;
