@@ -435,8 +435,8 @@ app.get("/activeTasks", async (req, res) => {
         u.fullname AS "fullName",
         t.title,
         t.points,
-        t.status
-        
+        t.status,
+        t.assignetat AS "assignedAt"
       FROM tasks t
       JOIN users u ON LOWER(u.username) = LOWER(t.assignedto)
       WHERE t.status IN ('available','in-progress')
