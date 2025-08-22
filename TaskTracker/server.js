@@ -683,9 +683,14 @@ cron.schedule("30 17 * * *", async () => {
 }, { timezone: "Europe/Istanbul" });
 // === DAILY CRON: Yeni Eklenen Görevler ===
 // Her gün sabah 09:00'da Europe/Istanbul saatine göre çalışır
-cron.schedule("00 09 * * *", async () => {
+cron.schedule("38 11 * * *", async () => {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   console.log("📬 Sabah Görev Cron tetiklendi:", today);
+
+  // Test modu kontrolü
+  const isTest = true;              // 👉 testte true yap
+  const testUser = "Ece";         // 👉 DB'deki username
+  const testEmail = "etekin1964@gmail.com"; // 👉 test mail adresi
 
   try {
     // 1) BUGÜN assign edilen görevleri çek
@@ -704,98 +709,59 @@ cron.schedule("00 09 * * *", async () => {
       return;
     }
 
-    // 2) Kullanıcı bazında grupla
-    const grouped = {};
-    for (const t of tasksRes.rows) {
-      if (!grouped[t.assignedto]) grouped[t.assignedto] = [];
-      grouped[t.assignedto].push(t);
-    }
+    if (isTest) {
+      // === TEST MODU ===
+      const myTasks = tasksRes.rows.filter(
+        t => t.assignedto.toLowerCase() === testUser.toLowerCase()
+      );
 
-    // 3) Kullanıcı bilgilerini çek
-    const usersRes = await pool.query("SELECT username, email, fullname FROM users");
+      if (myTasks.length === 0) {
+        console.log(`⚠️ Bugün ${testUser} için yeni görev yok`);
+        return;
+      }
 
-    // 4) Her kullanıcıya mail gönder
-    for (const u of usersRes.rows) {
-      const myTasks = grouped[u.username];
-      if (!myTasks) continue; // O kullanıcıya yeni görev atanmamış
+      let body = `Merhaba,\n\n${today} tarihinde sana atanan yeni görevler:\n\n`;
+      myTasks.forEach(t => {
+        body += `• ${t.title} → ${t.points} puan\n`;
+      });
 
-      const body = myTasks.map(t => `• ${t.title} → ${t.points} puan`).join("\n");
+      await transporter.sendMail({
+        from: `"Görev Takip (TEST)" <${process.env.EMAIL_USER}>`,
+        to: testEmail,
+        subject: `[TEST] ${today} Yeni Görevlerin (${testUser})`,
+        text: body
+      });
 
-      try {
+      console.log(`📧 TEST mail gönderildi: ${testUser} (${testEmail})`);
+    } else {
+      // === NORMAL MOD ===
+      const usersRes = await pool.query("SELECT username, email, fullname FROM users");
+
+      for (const u of usersRes.rows) {
+        const myTasks = tasksRes.rows.filter(
+          t => t.assignedto.toLowerCase() === u.username.toLowerCase()
+        );
+        if (!myTasks.length) continue;
+
+        let body = `Merhaba ${u.fullname},\n\n${today} tarihinde sana atanan yeni görevler:\n\n`;
+        myTasks.forEach(t => {
+          body += `• ${t.title} → ${t.points} puan\n`;
+        });
+
         await transporter.sendMail({
           from: `"Görev Takip" <${process.env.EMAIL_USER}>`,
           to: u.email,
           subject: `${today} Yeni Görevlerin`,
-          text: `Merhaba ${u.fullname},\n\nBugün sana atanan yeni görevler:\n\n${body}\n\nBaşarılar dileriz!`
+          text: body
         });
 
-        console.log(`📧 Sabah görevi mail gönderildi: ${u.username}`);
-      } catch (mailErr) {
-        console.error(`❌ Mail gönderilemedi (${u.username}):`, mailErr);
+        console.log(`📧 Mail gönderildi: ${u.username} (${u.email})`);
       }
     }
 
     console.log("✅ Sabah Görev Cron tamamlandı:", today);
   } catch (e) {
     console.error("Sabah Görev Cron hatası:", e);
-  }
-}, { timezone: "Europe/Istanbul" });
-
-// === DAILY CRON: Yeni Eklenen Görevler (TEST) ===
-// Her gün sabah 09:00'da Europe/Istanbul saatine göre çalışır
-cron.schedule("27 11 * * *", async () => {
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  console.log("📬 Sabah Görev Cron (TEST) tetiklendi:", today);
-
-  try {
-    // 1) BUGÜN assign edilen görevleri çek
-    const tasksRes = await pool.query(
-      `
-      SELECT id, title, points, assignedto, assignetat
-      FROM tasks
-      WHERE (assignetat::date = $1::date)
-      ORDER BY assignedto, id
-      `,
-      [today]
-    );
-
-    if (tasksRes.rows.length === 0) {
-      console.log("⚠️ Bugün eklenen görev yok");
-      return;
-    }
-
-    // 2) Kullanıcı bazında grupla
-    const grouped = {};
-    for (const t of tasksRes.rows) {
-      if (!grouped[t.assignedto]) grouped[t.assignedto] = [];
-      grouped[t.assignedto].push(t);
-    }
-
-    // 3) Mail gövdesini hazırla (toplu)
-    let body = `Bugün atanan yeni görevler:\n\n`;
-    for (const [username, tasks] of Object.entries(grouped)) {
-      body += `👤 ${username}:\n`;
-      tasks.forEach(t => {
-        body += `   • ${t.title} → ${t.points} puan\n`;
-      });
-      body += `\n`;
-    }
-
-    // 4) TEST için sabit bir kişiye mail gönder
-    const testEmail = "etekin1964@gmail.com";  // 👉 Buraya kendi mailini yaz
-
-    await transporter.sendMail({
-      from: `"Görev Takip (TEST)" <${process.env.EMAIL_USER}>`,
-      to: testEmail,
-      subject: `[TEST] ${today} Yeni Görevlerin`,
-      text: body
-    });
-
-    console.log(`📧 TEST mail gönderildi: ${testEmail}`);
-
-    console.log("✅ Sabah Görev Cron (TEST) tamamlandı:", today);
-  } catch (e) {
-    console.error("Sabah Görev Cron (TEST) hatası:", e);
   }
 }, { timezone: "Europe/Istanbul" });
 
