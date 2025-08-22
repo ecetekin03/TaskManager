@@ -468,6 +468,41 @@ async function loadPendingGoals() {
     ul.appendChild(li);
   });
 }
+// --- Onaylanmış Görevler ---
+async function loadApprovedTasks() {
+  const ul = document.getElementById("loadApprovedTasks");
+  if (!ul) return; // sayfada yoksa boş geç
+
+  try {
+    const res = await fetch(`${BASE_URL}/approvedTasks`);
+    if (!res.ok) throw new Error("Onaylanmış görevler alınamadı");
+    const approved = normalizeArray(await res.json());
+
+    ul.innerHTML = "";
+    if (!approved.length) {
+      ul.innerHTML = "<li>✅ Onaylanmış görev yok.</li>";
+      return;
+    }
+
+    // kullanıcıya göre grupla
+    const grouped = {};
+    approved.forEach(t => {
+      if (!grouped[t.assignedTo]) grouped[t.assignedTo] = [];
+      grouped[t.assignedTo].push(t);
+    });
+
+    for (const [who, tasks] of Object.entries(grouped)) {
+      const li = document.createElement("li");
+      li.innerHTML = `<strong>${who}</strong><ul>` +
+        tasks.map(t => `<li>• ${t.title} (${t.points} puan)</li>`).join("") +
+        `</ul>`;
+      ul.appendChild(li);
+    }
+  } catch (e) {
+    console.error(e);
+    ul.innerHTML = "<li>Hata: Onaylanmış görevler alınamadı.</li>";
+  }
+}
 
 async function approveGoal(goalId, who) {
   await fetch(`${BASE_URL}/approveGoal`, {
@@ -488,3 +523,5 @@ loadTasks();
 loadCompleted();
 loadLeaderboard();
 loadWeeklyStats();
+loadApprovedTasks();
+
