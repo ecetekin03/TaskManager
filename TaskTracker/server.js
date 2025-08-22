@@ -743,7 +743,7 @@ cron.schedule("00 09 * * *", async () => {
 
 // === DAILY CRON: Yeni Eklenen Görevler (TEST) ===
 // Her gün sabah 09:00'da Europe/Istanbul saatine göre çalışır
-cron.schedule("23 11 * * *", async () => {
+cron.schedule("27 11 * * *", async () => {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   console.log("📬 Sabah Görev Cron (TEST) tetiklendi:", today);
 
