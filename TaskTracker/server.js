@@ -719,6 +719,8 @@ cron.schedule("00 09 * * *", async () => {
         body += `• ${t.title} → ${t.points} puan\n`;
       });
 
+      body += `\nGörevlerini buradan takip edebilirsin: https://taskmanager-m90d.onrender.com/login.html\n\nİyi çalışmalar!`;
+
       await transporter.sendMail({
         from: `"Görev Takip" <${process.env.EMAIL_USER}>`,
         to: u.email,
