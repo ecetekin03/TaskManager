@@ -428,7 +428,7 @@ async function loadActiveTasks() {
       const durum = t.status === "in-progress" ? "Devam Ediyor" : "Başlamadı";
       const li = document.createElement("li");
      // ✨ Tarih eklendi
-    const dateText = t.assignedAt ? `📅 ${t.assignedAt}` : "";
+    const dateText = t.assignedAt ? `📅 ${t.assignedAt.slice(0,10)}` : "";
     li.textContent = `${t.fullName} → ${t.title} (${t.points} puan) [${durum}] ${dateText}`;
 
       ul.appendChild(li);
