@@ -683,7 +683,7 @@ cron.schedule("30 17 * * *", async () => {
 }, { timezone: "Europe/Istanbul" });
 // === DAILY CRON: Yeni Eklenen Görevler ===
 // Her gün sabah 09:00'da Europe/Istanbul saatine göre çalışır
-cron.schedule("45 11 * * *", async () => {
+cron.schedule("00 09 * * *", async () => {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   console.log("📬 Sabah Görev Cron tetiklendi:", today);
 
