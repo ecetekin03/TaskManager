@@ -484,11 +484,11 @@ async function loadApprovedTasks() {
       return;
     }
 
-    // kullanıcıya göre grupla
+    // kullanıcıya göre grupla (fullname bazlı)
     const grouped = {};
     approved.forEach(t => {
-      if (!grouped[t.assignedTo]) grouped[t.assignedTo] = [];
-      grouped[t.assignedTo].push(t);
+      if (!grouped[t.fullname]) grouped[t.fullname] = [];
+      grouped[t.fullname].push(t);
     });
 
     for (const [who, tasks] of Object.entries(grouped)) {
@@ -503,6 +503,7 @@ async function loadApprovedTasks() {
     ul.innerHTML = "<li>Hata: Onaylanmış görevler alınamadı.</li>";
   }
 }
+
 
 async function approveGoal(goalId, who) {
   await fetch(`${BASE_URL}/approveGoal`, {
