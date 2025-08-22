@@ -228,6 +228,26 @@ async function loadAllUserTasks() {
     list.appendChild(li);
   }
 }
+async function loadApprovedTasks() {
+  try {
+    const res = await fetch("/tasks"); 
+    const tasks = await res.json();
+
+    // Sadece onaylanmış olanları al
+    const approved = tasks.filter(t => t.status.toLowerCase() === "approved" || t.status.toLowerCase() === "done");
+
+    const ul = document.getElementById("approvedTasksList");
+    ul.innerHTML = "";
+
+    approved.forEach(t => {
+      const li = document.createElement("li");
+      li.textContent = `👤 ${t.assignedto}: ${t.title} → ${t.points} puan`;
+      ul.appendChild(li);
+    });
+  } catch (err) {
+    console.error("Onaylanmış görevler yüklenemedi:", err);
+  }
+}
 
 
 // Admin onaylama işlemi (backend: POST /approveTask)
