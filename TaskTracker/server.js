@@ -570,7 +570,7 @@ cron.schedule("29 17 * * *", async () => {
 
 // === DAILY CRON ADMIN ===
 // Her gün 17.00'da Europe/Istanbul saatine göre çalışır
-cron.schedule("15 17 * * *", async () => {
+cron.schedule("00 17 * * *", async () => {
   const today = new Date().toISOString().slice(0, 10);
   console.log("📬 Admin Cron tetiklendi:", today);
 
